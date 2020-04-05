@@ -1,14 +1,14 @@
 DEFAULT_CONFIG = """{
-    "name": "brick",
-    // "mode": "config",
+    "name": "brick"
+    // "mode": "config"
     "network": {
-        // "interface": "wifi",
+        // "interface": "wifi"
         "hotspot": {
             // "ssid": "esp32"
             // "password": "changeme"
-        },
+        }
         "wifi": {
-            // "ssid": "mynetwork",
+            // "ssid": "mynetwork"
             // "password": "mypassword"
         }
     }
