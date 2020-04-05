@@ -24,9 +24,12 @@ def start_hotspot(config):
     if password:
         kwargs['authmode'] = network.AUTH_WPA2_PSK
         kwargs['password'] = password
-    ap.config(**kwargs)
     ap.active(True)
-
+    active = ap.active()
+    while not ap.active():
+        pass
+    print('Hotspot started', ssid)
+    ap.config(**kwargs)
     ip = ap.ifconfig()[0]
     print('Hotspot ip: {}'.format(ip))
 

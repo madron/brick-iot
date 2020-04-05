@@ -38,7 +38,7 @@ class WebServer(MicroWebSrv):
                 {}
                 <form action="." method="post" accept-charset="ISO-8859-1">
                     <div>
-                        <textarea name="config" rows="40" cols="100">{}</textarea>
+                        <textarea name="config" rows="30" cols="80">{}</textarea>
                     </div>
                     <div>
                         <input type="submit" value="Save">
