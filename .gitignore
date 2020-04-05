@@ -5,7 +5,6 @@ __pycache__/
 
 
 # Local development files
-src/main.py
 src/config.json
 
 
