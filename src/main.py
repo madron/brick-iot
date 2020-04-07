@@ -2,7 +2,9 @@ from brick.app import Application
 
 
 def main():
-    Application().run()
+    app = Application()
+    while True:
+        app.start()
 
 
 if __name__ == '__main__':

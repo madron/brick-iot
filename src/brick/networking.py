@@ -1,50 +1,75 @@
 import network
+import uasyncio as asyncio
 import ubinascii
+import utime
 
 
-def start_networking(mode, config):
-    if mode == 'config':
-        network_interface = config.get('config_interface', 'hostspot')
-        config = config.get(network_interface, dict())
-        if network_interface == 'hostspot':
-            start_hotspot(config)
-        elif network_interface == 'wifi':
-            start_wifi(config)
+def print_time_diff(start_us, msg):
+    print('{} {} microseconds'.format(msg, utime.ticks_diff(utime.ticks_us(), start_us)))
 
 
-def start_hotspot(config):
-    print('Starting hotspot...')
-    ssid = config.get('ssid', None)
-    password = config.get('password', None)
-    if not ssid:
-        ssid = 'brick-{}'.format(ubinascii.hexlify(network.WLAN().config('mac'),'').decode())
+class NetworkManager:
+    def __init__(self, interface='wifi', config=dict()):
+        self.interface_name = interface
+        self.config = config.get(interface, dict())
+        self.connected = False
+        self.interface = None
 
-    ap = network.WLAN(network.AP_IF)
-    kwargs = dict(essid=ssid, dhcp_hostname='brick')
-    if password:
-        kwargs['authmode'] = network.AUTH_WPA2_PSK
-        kwargs['password'] = password
-    ap.active(True)
-    active = ap.active()
-    while not ap.active():
-        pass
-    print('Hotspot started', ssid)
-    ap.config(**kwargs)
-    ip = ap.ifconfig()[0]
-    print('Hotspot ip: {}'.format(ip))
+    async def connect(self):
+        if self.interface_name == 'hostspot':
+            await self.connect_hotspot(self.config)
+        elif self.interface_name == 'wifi':
+            await self.connect_wifi(self.config)
 
+    async def connect_hotspot(self, config):
+        ssid = config.get('ssid', None)
+        password = config.get('password', None)
+        if not ssid:
+            ssid = 'brick-{}'.format(ubinascii.hexlify(network.WLAN().config('mac'),'').decode())
+        print('Starting hotspot "{}" ...'.format(ssid))
 
-def start_wifi(config):
-    print('Starting wifi...')
-    ssid = config['ssid']
-    password = config['password']
+        self.interface = network.WLAN(network.AP_IF)
+        kwargs = dict(essid=ssid, dhcp_hostname='brick')
+        if password:
+            kwargs['authmode'] = network.AUTH_WPA2_PSK
+            kwargs['password'] = password
+        self.interface.active(True)
 
-    wifi = network.WLAN(network.STA_IF)
-    if not wifi.isconnected():
-        wifi.active(True)
-        wifi.connect(ssid, password)
-        while not wifi.isconnected():
-            pass
+        # Check interface
+        while not self.interface.active():
+            asyncio.sleep_ms(200)
+        asyncio.sleep_ms(200)
+        if self.interface.active():
+            print('Interface active')
 
-    ip = wifi.ifconfig()[0]
-    print('Wifi ip: {}'.format(ip))
+        # Configure hotspot
+        self.interface.config(**kwargs)
+
+        ip = self.interface.ifconfig()[0]
+        print('Hotspot "{}" started. Ip: {}'.format(ssid, ip))
+
+    async def connect_wifi(self, config):
+        ssid = config['ssid']
+        password = config['password']
+
+        print('Connecting to "{}" ...'.format(ssid))
+        self.interface = network.WLAN(network.STA_IF)
+        self.interface.active(True)
+        self.interface.connect(ssid, password)
+
+        # Wait for connection
+        while self.interface.status() == network.STAT_CONNECTING:
+            await asyncio.sleep_ms(200)
+        if not self.interface.isconnected():
+            print('Connection failed:', self.interface.status())
+            raise OSError
+
+        # Check if connection is stable
+        for _ in range(5):
+            if not self.interface.isconnected():
+                print('Connection failed:', self.interface.status())
+                raise OSError
+            await asyncio.sleep_ms(200)
+
+        self.ip = self.interface.ifconfig()[0]
+        print('Connected to "{}"  Got Ip {}'.format(ssid, self.ip))
