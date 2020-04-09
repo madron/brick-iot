@@ -1,7 +1,7 @@
 import utime
 import uasyncio as asyncio
 from brick.config import get_config
-from brick.mqtt import MQTTClient
+from brick.mqtt import MQTTManager
 from brick.networking import NetworkManager
 from brick.utils import get_iso_timestamp, get_traceback
 from brick.webserver import WebServer
@@ -48,14 +48,18 @@ class Application:
 
     def normal_mode(self):
         print('Normal mode')
-        self.client = MQTTClient(name=self.name, config=self.mqtt_config, network=self.network)
-        await self.mqtt_connect()
-        while True:
-            await self.client.publish('brick/status', 'online')
-            utime.sleep(2)
+        self.mqtt = MQTTManager(name=self.name, config=self.mqtt_config, network=self.network,
+                                connect_callback=self.on_connect, message_callback=self.on_message)
+        await self.mqtt.start()
 
-    async def mqtt_connect(self):
-        prefix = self.client.prefix
-        availability_topic = '{}/state'.format(prefix)
-        await self.client.connect()
-        await self.client.publish(topic=availability_topic, msg='online', retain=True, qos=1)
+    async def write_timestamp(self):
+        while True:
+            await self.mqtt.write('timestamp', get_iso_timestamp())
+            await asyncio.sleep(5)
+
+    async def on_connect(self):
+        self.loop.create_task(self.write_timestamp())
+
+    async def on_message(self, topic, payload):
+        if topic == 'color':
+            await self.mqtt.write('color', payload)

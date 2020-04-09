@@ -6,11 +6,14 @@ from umqtt.robust import MQTTClient
 
 
 class MQTTClient(mqtt_as.MQTTClient):
-    def __init__(self, name='brick', config=dict(), network=None):
-        self.config = config
+    def __init__(self, name='brick', config=dict(), network=None,
+                 last_will_topic='', connect_handler=None, message_handler=None):
+        # self.config = config
         self.network = network
-        self.prefix = '{}/{}'.format(self.config.get('prefix', 'brick'), name)
-        self.last_will_topic = '{}/state'.format(self.prefix)
+        self.last_will_topic = last_will_topic
+        self.connect_handler = connect_handler
+        self.message_handler = message_handler
+        self.loop = asyncio.get_event_loop()
         base_config = mqtt_as.config
         base_config['client_id'] = config.get('client_id', name)
         base_config['server'] = config.get('host', 'localhost')
@@ -21,10 +24,20 @@ class MQTTClient(mqtt_as.MQTTClient):
         base_config['ssl'] = config.get('ssl', False)
         base_config['ssl_params'] = config.get('ssl_params', dict())
         # Last will
-        retain = True
-        qos = 1
-        base_config['will'] = [self.last_will_topic, 'offline', retain, qos]
+        base_config['will'] = [last_will_topic, 'offline', True, 1]
+        # handler
+        base_config['connect_coro'] = self.on_connect
+        base_config['subs_cb'] = self.on_message
         super().__init__(base_config)
+
+    async def on_connect(self, client):
+        await client.publish(self.last_will_topic, 'online', True, 1)
+        if self.connect_handler:
+            await self.connect_handler(client)
+
+    def on_message(self, topic, payload, retained):
+        if self.message_handler:
+            self.loop.create_task(self.message_handler(topic.decode('utf-8'), payload.decode('utf-8'), retained))
 
     async def connect(self):
         if not self._has_connected:
@@ -91,3 +104,40 @@ class MQTTClient(mqtt_as.MQTTClient):
                     self._in_connect = False
                     self._isconnected = False
         self.dprint('Disconnected, exited _keep_connected')
+
+
+class MQTTManager:
+    def __init__(self, name='brick', config=dict(), network=None,
+                 connect_callback=None, message_callback=None):
+        self.prefix = '{}/{}'.format(config.get('prefix', 'brick'), name)
+        self.get_prefix = '{}/get'.format(self.prefix)
+        self.set_prefix = '{}/set'.format(self.prefix)
+        last_will_topic = '{}/state'.format(self.get_prefix)
+        self.connect_callback = connect_callback
+        self.message_callback = message_callback
+        self.client = MQTTClient(
+            name=name,
+            config=config,
+            network=network,
+            last_will_topic=last_will_topic,
+            connect_handler=self.on_connect,
+            message_handler=self.on_message,
+        )
+
+    async def start(self):
+        await self.client.connect()
+
+    async def on_connect(self, client):
+        topic = '{}/#'.format(self.set_prefix)
+        await client.subscribe(topic, 1)
+        if self.connect_callback:
+            await self.connect_callback()
+
+    async def on_message(self, topic, payload, retained):
+        if self.message_callback:
+            topic = topic.replace('{}/'.format(self.set_prefix), '', 1)
+            await self.message_callback(topic, payload)
+
+    async def write(self, topic, payload):
+        topic = '{}/{}'.format(self.get_prefix, topic)
+        await self.client.publish(topic, payload, True, 1)
