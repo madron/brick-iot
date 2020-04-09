@@ -1,7 +1,7 @@
 import utime
 import uasyncio as asyncio
 from brick.config import get_config
-from brick.mqtt import get_mqtt_client
+from brick.mqtt import MQTTClient
 from brick.networking import NetworkManager
 from brick.utils import get_iso_timestamp, get_traceback
 from brick.webserver import WebServer
@@ -35,10 +35,8 @@ class Application:
                 error_log.write(traceback)
 
     async def run(self):
-        # Start networking
-        await self.network.connect()
-        #
         if self.mode == 'config':
+            await self.network.connect()
             self.config_mode()
         elif self.mode == 'normal':
             await self.normal_mode()
@@ -49,22 +47,15 @@ class Application:
         server.Start()
 
     def normal_mode(self):
-        # count = 0
-        # while True:
-        #     count += 1
-        #     print(count)
-        #     await asyncio.sleep(1)
-        # #
         print('Normal mode')
-        self.client = get_mqtt_client(name=self.name, config=self.mqtt_config)
-        self.mqtt_connect()
+        self.client = MQTTClient(name=self.name, config=self.mqtt_config, network=self.network)
+        await self.mqtt_connect()
         while True:
-            self.client.publish('brick/status', 'online')
+            await self.client.publish('brick/status', 'online')
             utime.sleep(2)
 
-    def mqtt_connect(self):
-        prefix = '{}/{}'.format(self.mqtt_config.get('prefix', 'brick'), self.name)
+    async def mqtt_connect(self):
+        prefix = self.client.prefix
         availability_topic = '{}/state'.format(prefix)
-        self.client.set_last_will(topic=availability_topic, msg='offline', retain=True, qos=1)
-        self.client.connect()
-        self.client.publish(topic=availability_topic, msg='online', retain=True, qos=1)
+        await self.client.connect()
+        await self.client.publish(topic=availability_topic, msg='online', retain=True, qos=1)

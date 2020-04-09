@@ -4,10 +4,6 @@ import ubinascii
 import utime
 
 
-def print_time_diff(start_us, msg):
-    print('{} {} microseconds'.format(msg, utime.ticks_diff(utime.ticks_us(), start_us)))
-
-
 class NetworkManager:
     def __init__(self, interface='wifi', config=dict()):
         self.interface_name = interface
@@ -73,3 +69,9 @@ class NetworkManager:
 
         self.ip = self.interface.ifconfig()[0]
         print('Connected to "{}"  Got Ip {}'.format(ssid, self.ip))
+
+    def isconnected(self):
+        if self.interface_name == 'hostspot':
+            return True
+        elif self.interface_name == 'wifi':
+            return self.interface.isconnected()

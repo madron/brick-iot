@@ -12,3 +12,7 @@ def get_traceback(error):
     stream = uio.StringIO()
     sys.print_exception(error, stream)
     return stream.getvalue()
+
+
+def print_time_diff(start_us, msg):
+    print('{} {} microseconds'.format(msg, utime.ticks_diff(utime.ticks_us(), start_us)))
