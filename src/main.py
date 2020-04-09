@@ -8,7 +8,7 @@ def main():
         app.start()
         # Wait a little before restarting app
         utime.sleep(5)
-
+        print('Restarting app')
 
 
 if __name__ == '__main__':

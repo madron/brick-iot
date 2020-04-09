@@ -1,9 +1,9 @@
-import sys
 import utime
 import uasyncio as asyncio
 from brick.config import get_config
 from brick.mqtt import get_mqtt_client
 from brick.networking import NetworkManager
+from brick.utils import get_iso_timestamp, get_traceback
 from brick.webserver import WebServer
 
 
@@ -28,11 +28,11 @@ class Application:
             self.loop.create_task(self.run())
             self.loop.run_forever()
         except Exception as error:
-            sys.print_exception(error)
+            traceback = get_traceback(error)
+            print(traceback)
             with open("error.log", "a") as error_log:
-                timestamp = '{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d} '.format(*utime.localtime())
-                error_log.write(timestamp)
-                sys.print_exception(error, error_log)
+                error_log.write('{} '.format(get_iso_timestamp()))
+                error_log.write(traceback)
 
     async def run(self):
         # Start networking
