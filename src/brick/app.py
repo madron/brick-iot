@@ -28,9 +28,10 @@ class Application:
             self.loop.create_task(self.run())
             self.loop.run_forever()
         except Exception as error:
+            sys.print_exception(error)
             with open("error.log", "a") as error_log:
                 timestamp = '{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d} '.format(*utime.localtime())
-                f.write(timestamp)
+                error_log.write(timestamp)
                 sys.print_exception(error, error_log)
 
     async def run(self):
