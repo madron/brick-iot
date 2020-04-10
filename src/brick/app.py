@@ -1,10 +1,10 @@
 import utime
 import uasyncio as asyncio
+from brick import web
 from brick.config import get_config
 from brick.mqtt import MQTTManager
 from brick.networking import NetworkManager
 from brick.utils import get_iso_timestamp, get_traceback
-from brick.webserver import WebServer
 
 
 class Application:
@@ -15,6 +15,8 @@ class Application:
         self.mqtt_config = self.config.get('mqtt', dict())
         self.network = self.get_network_manager()
         self.loop = asyncio.get_event_loop()
+        self.webserver = web.Server()
+        self.webserver_task = None
 
     def get_network_manager(self):
         if self.mode == 'config':
@@ -43,14 +45,15 @@ class Application:
 
     def config_mode(self):
         print('Config mode')
-        server = WebServer()
-        server.Start()
+        self.webserver_task = self.webserver.start()
 
     def normal_mode(self):
         print('Normal mode')
         self.mqtt = MQTTManager(name=self.name, config=self.mqtt_config, network=self.network,
                                 connect_callback=self.on_connect, message_callback=self.on_message)
         await self.mqtt.start()
+        if self.config.get('config_mode', '') == 'normal':
+            self.webserver_task = self.webserver.start()
 
     async def write_timestamp(self):
         while True:

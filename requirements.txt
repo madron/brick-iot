@@ -1,1 +1,2 @@
-coverage
+micropython-pkg_resources
+
