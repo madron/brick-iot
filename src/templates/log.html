@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang=en>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Brick</title>
+    </head>
+    <body>
+        <div id="result"></div>
+        <textarea id="log" rows="40" cols="120">Waiting...</textarea>
+
+        <script>
+            if(typeof(EventSource) !== "undefined") {
+                var lines = [];
+                var text_lines = '';
+                var textarea = document.getElementById('log');
+                var source = new EventSource('/log/lines');
+                source.onmessage = function(event) {
+                    lines.push(event.data) ;
+                    if (lines.length > 100) {
+                        lines.shift();
+                    }
+                    text_lines = '';
+                    lines.forEach(function (item, index, array) {
+                        text_lines = text_lines + item + "\\n";
+                    });
+                    textarea.value = text_lines;
+                    textarea.scrollTop = textarea.scrollHeight;
+                };
+            } else {
+                textarea.vaue = "Sorry, your browser does not support server-sent events...";
+            }
+        </script>
+
+    </body>
+</html>

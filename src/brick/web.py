@@ -8,7 +8,9 @@ from brick import config
 class Server(WebApp):
     def __init__(self, **kwargs):
         routes = [
-            ('/', self.index)
+            ('/', self.index),
+            ('/log', self.log),
+            ('/log/lines', self.log_lines),
         ]
         kwargs['routes'] = routes
         super().__init__(None, **kwargs)
@@ -78,3 +80,16 @@ class Server(WebApp):
         yield from start_response(response)
         yield from response.awrite(content)
         return
+
+    def log(self, request, response):
+        yield from start_response(response)
+        yield from self.render_template(response, 'log.html', ())
+
+    def log_lines(self, request, response):
+        headers = {'Cache-Control': 'no-cache'}
+        yield from start_response(response, content_type='text/event-stream', headers=headers)
+        counter = 0
+        while True:
+            counter += 1
+            yield from response.awrite('data: {}\n\n'.format(counter))
+            await asyncio.sleep(1)
