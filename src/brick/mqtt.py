@@ -2,7 +2,6 @@ import gc
 import usocket as socket
 import uasyncio as asyncio
 import mqtt_as
-from umqtt.robust import MQTTClient
 
 
 class MQTTClient(mqtt_as.MQTTClient):
