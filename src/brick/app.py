@@ -5,6 +5,7 @@ from brick.config import get_config
 from brick.logging import LogCollector, StdoutLogConsumer
 from brick.mqtt import MQTTManager
 from brick.networking import NetworkManager
+from brick.ntp import NtpClient
 from brick.utils import get_iso_timestamp, get_traceback
 
 
@@ -28,6 +29,9 @@ class Application:
         self.log = self.log_collector.get_logger('app')
         # Network
         self.network = self.get_network_manager()
+        # Ntp
+        ntp_config = self.network.config.get('ntp', dict())
+        self.ntp = NtpClient(log=self.log_collector.get_logger('ntp'), network=self.network, **ntp_config)
         # Web server
         self.webserver = web.Server(log=self.log_collector.get_logger('web'))
         self.webserver_task = None
@@ -70,6 +74,7 @@ class Application:
         self.mqtt = MQTTManager(name=self.name, config=self.mqtt_config, network=self.network,
                                 connect_callback=self.on_connect, message_callback=self.on_message)
         await self.mqtt.start()
+        await self.ntp.start()
         if self.config.get('config_mode', '') == 'normal':
             self.webserver_task = self.webserver.start()
 
