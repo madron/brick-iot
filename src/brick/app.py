@@ -10,11 +10,12 @@ from brick.utils import get_iso_timestamp, get_traceback
 
 class Application:
     def __init__(self):
+        # Config
         self.config = get_config()
         self.name = self.config.get('name', 'brick')
         self.mode = self.config.get('mode', 'normal')
         self.mqtt_config = self.config.get('mqtt', dict())
-        self.network = self.get_network_manager()
+        # Asyncio loop
         self.loop = asyncio.get_event_loop()
         # Logging
         log_config = self.config.get('log', dict())
@@ -25,6 +26,8 @@ class Application:
             components=log_config.get('components', dict()),
         )
         self.log = self.log_collector.get_logger('app')
+        # Network
+        self.network = self.get_network_manager()
         # Web server
         self.webserver = web.Server()
         self.webserver_task = None
@@ -34,7 +37,11 @@ class Application:
             interface = self.config.get('config_interface', 'hostspot')
         else:
             interface = self.config.get('interface', 'wifi')
-        return NetworkManager(interface=interface, config=self.config.get('network', dict()))
+        return NetworkManager(
+            log=self.log_collector.get_logger('network'),
+            interface=interface,
+            config=self.config.get('network', dict()),
+        )
 
     def start(self):
         try:
