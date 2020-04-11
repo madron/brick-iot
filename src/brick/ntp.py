@@ -2,6 +2,7 @@ import machine
 import uasyncio as asyncio
 import usocket as socket
 import ustruct as struct
+import utime
 from brick.utils import get_iso_timestamp
 
 
@@ -20,8 +21,22 @@ class NtpClient:
 
     async def start(self):
         self.log.info('Started')
-        self.task = asyncio.create_task(self.loopp())
+        self.task = asyncio.create_task(self.start_loop())
         await asyncio.sleep(0)
+
+    async def start_loop(self):
+        while True:
+            try:
+                timestamp = self.get_time()
+                await self.set_time(timestamp=timestamp)
+                self.log.info('Host: {}  time: {}'.format(self.host, get_iso_timestamp(timestamp)))
+                await asyncio.sleep(self.delay)
+            except OSError:
+                self.log.warning('Fail to connect to {}, Retrying in 5 seconds'.format(self.host))
+                await asyncio.sleep(5)
+            except Exception as error:
+                self.log.exception('Fail to connect to {}, Retrying in {} seconds'.format(self.host, self.delay), error)
+                await asyncio.sleep(self.delay)
 
     async def stop_later(self, delay):
         self.log.info('Stopping in {} seconds'.format(delay))
@@ -33,20 +48,6 @@ class NtpClient:
         self.task.cancel()
         await asyncio.sleep(0)
         self.log.info('Stopped')
-
-    async def loopp(self):
-        while True:
-            try:
-                timestamp = self.get_time()
-                self.set_time(timestamp)
-                self.log.info('Host: {}  time: {}'.format(self.host, get_iso_timestamp(timestamp)))
-                await asyncio.sleep(self.delay)
-            except OSError:
-                self.log.warning('Fail to connect to {}, Retrying in 5 seconds'.format(self.host))
-                await asyncio.sleep(5)
-            except Exception as error:
-                self.log.exception('Fail to connect to {}, Retrying in {} seconds'.format(self.host, self.delay), error)
-                await asyncio.sleep(self.delay)
 
     def get_time(self):
         NTP_QUERY = bytearray(48)
@@ -67,4 +68,4 @@ class NtpClient:
     async def set_time(self, timestamp=None):
         timestamp = timestamp or self.get_time()
         tm = utime.localtime(timestamp)
-        machine.RTC().datetime((tm[0], tm[1], tm[2], tm[6] + 1, tm[3], tm[4], tm[5], 0))
+        machine.RTC().init((tm[0], tm[1], tm[2], tm[6] + 1, tm[3], tm[4], tm[5], 0))
