@@ -63,7 +63,12 @@ class Server(WebApp):
         headers = {'Cache-Control': 'no-cache'}
         yield from start_response(response, content_type='text/event-stream', headers=headers)
         counter = 0
-        while True:
-            counter += 1
-            yield from response.awrite('data: {}\n\n'.format(counter))
-            await asyncio.sleep(1)
+        try:
+            while True:
+                counter += 1
+                yield from response.awrite('data: {}\n\n'.format(counter))
+                await asyncio.sleep(1)
+        except:
+            # Handle disconnection
+            pass
+

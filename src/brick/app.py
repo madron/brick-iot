@@ -2,6 +2,7 @@ import utime
 import uasyncio as asyncio
 from brick import web
 from brick.config import get_config
+from brick.logging import LogCollector, StdoutLogConsumer
 from brick.mqtt import MQTTManager
 from brick.networking import NetworkManager
 from brick.utils import get_iso_timestamp, get_traceback
@@ -15,6 +16,16 @@ class Application:
         self.mqtt_config = self.config.get('mqtt', dict())
         self.network = self.get_network_manager()
         self.loop = asyncio.get_event_loop()
+        # Logging
+        log_config = self.config.get('log', dict())
+        self.log_collector = LogCollector()
+        self.stdout_logger = StdoutLogConsumer(
+            self.log_collector,
+            level=log_config.get('default', 'info'),
+            components=log_config.get('components', dict()),
+        )
+        self.log = self.log_collector.get_logger('app')
+        # Web server
         self.webserver = web.Server()
         self.webserver_task = None
 
@@ -38,17 +49,17 @@ class Application:
 
     async def run(self):
         if self.mode == 'config':
+            self.log.info('App started, mode: config')
             await self.network.connect()
             self.config_mode()
         elif self.mode == 'normal':
+            self.log.info('App started, mode: normal')
             await self.normal_mode()
 
     def config_mode(self):
-        print('Config mode')
         self.webserver_task = self.webserver.start()
 
     def normal_mode(self):
-        print('Normal mode')
         self.mqtt = MQTTManager(name=self.name, config=self.mqtt_config, network=self.network,
                                 connect_callback=self.on_connect, message_callback=self.on_message)
         await self.mqtt.start()
