@@ -25,3 +25,12 @@ mkdir -p src/picoweb
 wget -P src/picoweb https://raw.githubusercontent.com/pfalcon/picoweb/$RELEASE/picoweb/__init__.py
 wget -P src/picoweb https://raw.githubusercontent.com/pfalcon/picoweb/$RELEASE/picoweb/utils.py
 ```
+
+### Utemplate
+```sh
+export RELEASE=d5ddc8e329bb34a515160e6cafb4f58be38e3abc
+rm -rf src/utemplate
+mkdir -p src/utemplate
+wget -P src/utemplate https://raw.githubusercontent.com/pfalcon/utemplate/$RELEASE/utemplate/compiled.py
+wget -P src/utemplate https://raw.githubusercontent.com/pfalcon/utemplate/$RELEASE/utemplate/source.py
+```
