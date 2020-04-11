@@ -1,12 +1,11 @@
 import gc
-import logging
 import uasyncio as asyncio
 from picoweb import WebApp, start_response
 from brick import config
 
 
 class Server(WebApp):
-    def __init__(self, **kwargs):
+    def __init__(self, log, **kwargs):
         routes = [
             ('/', self.index),
             ('/log', self.log),
@@ -14,9 +13,9 @@ class Server(WebApp):
         ]
         kwargs['routes'] = routes
         super().__init__(None, **kwargs)
+        self.log = log
 
     def start(self, logger=None, debug=False):
-        self.log = logger or logging.getLogger('web')
         host = '0.0.0.0'
         port = 80
         gc.collect()
@@ -26,7 +25,7 @@ class Server(WebApp):
             app.init()
         loop = asyncio.get_event_loop()
         task = loop.create_task(asyncio.start_server(self._handle, host, port))
-        self.log.info(' Server started on port {}'.format(port))
+        self.log.info('Server started on port {}'.format(port))
         return task
 
     def redirect(self, response, location):

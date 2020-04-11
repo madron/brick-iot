@@ -29,7 +29,7 @@ class Application:
         # Network
         self.network = self.get_network_manager()
         # Web server
-        self.webserver = web.Server()
+        self.webserver = web.Server(log=self.log_collector.get_logger('web'))
         self.webserver_task = None
 
     def get_network_manager(self):
