@@ -37,7 +37,7 @@ class Server(WebApp):
         success_url = '/'
         method = request.method
 
-        error = None
+        error = ''
         if method == 'POST':
             await request.read_form_data()
             config_text = request.form['config']
@@ -51,34 +51,8 @@ class Server(WebApp):
         else:
             config_text = config.get_config_text()
 
-        error_text = ''
-        if error:
-            error_text = '<h2>Configuration error: {}</h2>'.format(error)
-
-        content = """\
-        <!DOCTYPE html>
-        <html lang=en>
-            <head>
-                <meta charset="UTF-8" />
-                <title>Brick</title>
-            </head>
-            <body>
-                <h1>Brick Configuration</h1>
-                {}
-                <form action="." method="post" accept-charset="ISO-8859-1">
-                    <div>
-                        <textarea name="config" rows="30" cols="80">{}</textarea>
-                    </div>
-                    <div>
-                        <input type="submit" value="Save">
-                    </div>
-                </form>
-            </body>
-        </html>
-        """.format(error_text, config_text)
-
         yield from start_response(response)
-        yield from response.awrite(content)
+        yield from self.render_template(response, 'config.html', (error, config_text))
         return
 
     def log(self, request, response):

@@ -1,0 +1,22 @@
+{% args error, config_text %}
+<!DOCTYPE html>
+<html lang=en>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Brick</title>
+    </head>
+    <body>
+        <h1>Brick Configuration</h1>
+            {% if error %}
+                <h2>Error: {{ error }}</h2>
+            {% endif %}
+        <form action="." method="post" accept-charset="ISO-8859-1">
+            <div>
+                <textarea name="config" rows="30" cols="80">{{ config_text }}</textarea>
+            </div>
+            <div>
+                <input type="submit" value="Save">
+            </div>
+        </form>
+    </body>
+</html>
