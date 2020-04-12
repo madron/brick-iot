@@ -65,10 +65,10 @@ class NtpSync:
                 timestamp = await self.ntp_client.get_time()
                 current_timestamp = utime.mktime(utime.localtime())
                 await self.ntp_client.set_time(timestamp=timestamp)
-                self.log.info('Sync successfull. Drift: {}'.format(current_timestamp - timestamp))
+                self.log.info('Sync successful. Drift: {}'.format(current_timestamp - timestamp))
                 await asyncio.sleep(self.delay)
-            except OSError:
-                self.log.warning('Fail to connect to {}, Retrying in {} seconds'.format(self.host, self.fail_delay))
+            except OSError as error:
+                self.log.warning('Fail to connect to {} (OSError {}), Retrying in {} seconds'.format(self.host, error.args[0], self.fail_delay))
                 await asyncio.sleep(self.fail_delay)
             except Exception as error:
                 self.log.exception('Fail to connect to {}, Retrying in {} seconds'.format(self.host, self.delay), error)
