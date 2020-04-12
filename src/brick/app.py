@@ -45,6 +45,10 @@ class Application:
             log=self.log_collector.get_logger('network'),
             interface=interface,
             config=self.config.get('network', dict()),
+            on_start=self.on_network_start,
+            on_stop=self.on_network_stop,
+            on_connect=self.on_network_connect,
+            on_disconnect=self.on_network_disconnect,
         )
 
     def start(self):
@@ -59,22 +63,21 @@ class Application:
                 error_log.write(traceback)
 
     async def run(self):
+        await self.network.start()
         if self.mode == 'config':
             self.log.info('App started, mode: config')
-            await self.network.connect()
-            self.config_mode()
+            await self.config_mode()
         elif self.mode == 'normal':
             self.log.info('App started, mode: normal')
             await self.normal_mode()
 
-    def config_mode(self):
+    async def config_mode(self):
         self.webserver_task = self.webserver.start()
 
-    def normal_mode(self):
+    async def normal_mode(self):
         self.mqtt = MQTTManager(name=self.name, config=self.mqtt_config, network=self.network,
                                 connect_callback=self.on_connect, message_callback=self.on_message)
-        await self.mqtt.start()
-        await self.ntp.start()
+        # await self.mqtt.start()
         if self.config.get('config_mode', '') == 'normal':
             self.webserver_task = self.webserver.start()
 
@@ -85,6 +88,18 @@ class Application:
 
     async def on_connect(self):
         self.loop.create_task(self.write_timestamp())
+
+    async def on_network_start(self, **kwargs):
+        pass
+
+    async def on_network_stop(self, **kwargs):
+        pass
+
+    async def on_network_connect(self, **kwargs):
+        await self.ntp.start()
+
+    async def on_network_disconnect(self, **kwargs):
+        await self.ntp.stop()
 
     async def on_message(self, topic, payload):
         if topic == 'color':
