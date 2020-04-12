@@ -3,39 +3,73 @@ import uasyncio as asyncio
 import usocket as socket
 import ustruct as struct
 import utime
+from uasyncio.stream import Stream
 from brick.utils import get_iso_timestamp
 
 
 class NtpClient:
-    def __init__(self, host='pool.ntp.org', timezone=0, delay=86400, ntp_delta=3155673600, log=None, network=None):
+    def __init__(self, host='pool.ntp.org', timezone_callback=None, ntp_delta=3155673600):
         # (date(2000, 1, 1) - date(1900, 1, 1)).days * 24*60*60
+        self.host = host
+        self.timezone_callback = timezone_callback
+        self.ntp_delta = ntp_delta
+
+    async def get_time(self):
+        NTP_QUERY = bytearray(48)
+        NTP_QUERY[0] = 0x1B
+        addr = socket.getaddrinfo(self.host, 123)[0][-1]
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.setblocking(False)
+        stream = Stream(s)
+        try:
+            s.sendto(NTP_QUERY, addr)
+            msg = await stream.read(48)
+        finally:
+            await stream.wait_closed()
+        val = struct.unpack("!I", msg[40:44])[0] - self.ntp_delta
+        if self.timezone_callback:
+            val = self.timezone_callback(val)
+        return val
+
+    # There's currently no timezone support in MicroPython, so
+    # utime.localtime() will return UTC time (as if it was .gmtime())
+    async def set_time(self, timestamp=None):
+        timestamp = timestamp or await self.get_time()
+        tm = utime.localtime(timestamp)
+        machine.RTC().init((tm[0], tm[1], tm[2], tm[6] + 1, tm[3], tm[4], tm[5], 0))
+
+
+class NtpSync:
+    def __init__(self, log, host='pool.ntp.org', timezone=0, delay=86400, fail_delay=10):
+        self.ntp_client = NtpClient(host=host, timezone_callback=self.timezone_callback)
         self.host = host
         self.timezone = timezone
         self.delay = delay
-        self.ntp_delta = ntp_delta
+        self.fail_delay = fail_delay
         self.log = log
-        self.network = network
         # Task
         self.task = None
         self.loop = asyncio.get_event_loop()
 
+    def timezone_callback(self, timestamp):
+        return timestamp + (self.timezone * 3600)
+
     async def start(self):
-        self.log.info('Started')
+        self.log.info('Started. Host: {} - delay: {}'.format(self.host, self.delay))
         self.task = asyncio.create_task(self.start_loop())
         await asyncio.sleep(0)
 
     async def start_loop(self):
         while True:
             try:
-                timestamp = await self.get_time()
+                timestamp = await self.ntp_client.get_time()
                 current_timestamp = utime.mktime(utime.localtime())
-                await self.set_time(timestamp=timestamp)
-                drift = current_timestamp - timestamp
-                self.log.info('Host: {}  time: {}  drift: {}'.format(self.host, get_iso_timestamp(timestamp), drift))
+                await self.ntp_client.set_time(timestamp=timestamp)
+                self.log.info('Sync successfull. Drift: {}'.format(current_timestamp - timestamp))
                 await asyncio.sleep(self.delay)
             except OSError:
-                self.log.warning('Fail to connect to {}, Retrying in 5 seconds'.format(self.host))
-                await asyncio.sleep(5)
+                self.log.warning('Fail to connect to {}, Retrying in {} seconds'.format(self.host, self.fail_delay))
+                await asyncio.sleep(self.fail_delay)
             except Exception as error:
                 self.log.exception('Fail to connect to {}, Retrying in {} seconds'.format(self.host, self.delay), error)
                 await asyncio.sleep(self.delay)
@@ -50,24 +84,3 @@ class NtpClient:
         self.task.cancel()
         await asyncio.sleep(0)
         self.log.info('Stopped')
-
-    async def get_time(self):
-        NTP_QUERY = bytearray(48)
-        NTP_QUERY[0] = 0x1B
-        addr = socket.getaddrinfo(self.host, 123)[0][-1]
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            s.settimeout(1)
-            res = s.sendto(NTP_QUERY, addr)
-            msg = s.recv(48)
-        finally:
-            s.close()
-        val = struct.unpack("!I", msg[40:44])[0]
-        return val + (self.timezone * 3600) - self.ntp_delta
-
-    # There's currently no timezone support in MicroPython, so
-    # utime.localtime() will return UTC time (as if it was .gmtime())
-    async def set_time(self, timestamp=None):
-        timestamp = timestamp or self.get_time()
-        tm = utime.localtime(timestamp)
-        machine.RTC().init((tm[0], tm[1], tm[2], tm[6] + 1, tm[3], tm[4], tm[5], 0))

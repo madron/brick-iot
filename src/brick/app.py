@@ -5,7 +5,7 @@ from brick.config import get_config
 from brick.logging import LogCollector, StdoutLogConsumer
 from brick.mqtt import MQTTManager
 from brick.networking import NetworkManager
-from brick.ntp import NtpClient
+from brick.ntp import NtpSync
 from brick.utils import get_iso_timestamp, get_traceback
 
 
@@ -31,7 +31,7 @@ class Application:
         self.network = self.get_network_manager()
         # Ntp
         ntp_config = self.network.config.get('ntp', dict())
-        self.ntp = NtpClient(log=self.log_collector.get_logger('ntp'), network=self.network, **ntp_config)
+        self.ntp = NtpSync(self.log_collector.get_logger('ntp'), **ntp_config)
         # Web server
         self.webserver = web.Server(log=self.log_collector.get_logger('web'))
         self.webserver_task = None
