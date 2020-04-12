@@ -27,9 +27,11 @@ class NtpClient:
     async def start_loop(self):
         while True:
             try:
-                timestamp = self.get_time()
+                timestamp = await self.get_time()
+                current_timestamp = utime.mktime(utime.localtime())
                 await self.set_time(timestamp=timestamp)
-                self.log.info('Host: {}  time: {}'.format(self.host, get_iso_timestamp(timestamp)))
+                drift = current_timestamp - timestamp
+                self.log.info('Host: {}  time: {}  drift: {}'.format(self.host, get_iso_timestamp(timestamp), drift))
                 await asyncio.sleep(self.delay)
             except OSError:
                 self.log.warning('Fail to connect to {}, Retrying in 5 seconds'.format(self.host))
@@ -49,7 +51,7 @@ class NtpClient:
         await asyncio.sleep(0)
         self.log.info('Stopped')
 
-    def get_time(self):
+    async def get_time(self):
         NTP_QUERY = bytearray(48)
         NTP_QUERY[0] = 0x1B
         addr = socket.getaddrinfo(self.host, 123)[0][-1]
