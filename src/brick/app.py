@@ -48,7 +48,7 @@ class Application:
             **ntp_config,
         )
         # Web server
-        self.webserver = web.Server(log=self.log_collector.get_logger('web'))
+        self.webserver = web.Server(log_collector=self.log_collector)
         self.webserver_task = None
 
     def get_network_manager(self):

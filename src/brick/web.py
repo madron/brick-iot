@@ -2,10 +2,11 @@ import gc
 import uasyncio as asyncio
 from picoweb import WebApp, start_response
 from brick import config
+from brick.logging import LEVEL_NAME
 
 
 class Server(WebApp):
-    def __init__(self, log, **kwargs):
+    def __init__(self, log_collector, **kwargs):
         routes = [
             ('/', self.index),
             ('/log', self.log),
@@ -13,7 +14,8 @@ class Server(WebApp):
         ]
         kwargs['routes'] = routes
         super().__init__(None, **kwargs)
-        self.log = log
+        self.log_collector = log_collector
+        self.log = self.log_collector.get_logger('web')
 
     def start(self, logger=None, debug=False):
         host = '0.0.0.0'
@@ -61,13 +63,27 @@ class Server(WebApp):
     def log_lines(self, request, response):
         headers = {'Cache-Control': 'no-cache'}
         yield from start_response(response, content_type='text/event-stream', headers=headers)
-        counter = 0
         try:
-            while True:
-                counter += 1
-                yield from response.awrite('data: {}\n\n'.format(counter))
-                await asyncio.sleep(1)
-        except:
-            # Handle disconnection
-            pass
+            collector = LogLineCollector()
+            consumer_id = self.log_collector.add_consumer(collector.callback, level='info', components=dict())
+            yield from collector.stream(response)
+        finally:
+            self.log_collector.remove_consumer(consumer_id)
 
+
+class LogLineCollector():
+    def __init__(self):
+        self.line = None
+        self.event = asyncio.Event()
+
+    def stream(self, response):
+        while True:
+            await self.event.wait()
+            if self.line:
+                yield from response.awrite('data: {level} {component} {message}\n\n'.format(**self.line))
+                self.line = None
+            self.event.clear()
+
+    async def callback(self, level, component, message, *args, **kwargs):
+        self.line = dict(level=LEVEL_NAME[level], component=component, message=message)
+        self.event.set()
