@@ -25,17 +25,16 @@ class Broker:
 class Dispatcher:
     def __init__(self, log):
         self.log = log
-        self.brokers = dict()
+        self.callbacks = dict()
         self.subscriptions = dict()
 
     def get_broker(self, component, callback=None):
-        self.brokers[component] = dict(callback=callback, subscriptions=dict())
+        self.callbacks[component] = callback
         return Broker(self, component)
 
     def send(self, sender, recipient, topic, payload=None):
-        if recipient in self.brokers:
-            broker = self.brokers[recipient]
-            callback = self.brokers[recipient]['callback']
+        if recipient in self.callbacks:
+            callback = self.callbacks[recipient]
             if bool(callback):
                 log_context = ' - {} -> {}'.format(sender, recipient)
                 coro = self._callback_wrapper(log_context, callback, sender=sender, topic=topic, payload=payload)
@@ -47,11 +46,9 @@ class Dispatcher:
         return asyncio.sleep(0)
 
     async def subscribe(self, component, callback, sender, topic):
-        key = (sender, topic)
-        if key in self.brokers[component]['subscriptions']:
+        components = self.subscriptions.setdefault((sender, topic), dict())
+        if component in components:
             self.log.error('Already subscribed - {} -> {} {}'.format(component, sender, topic))
-        self.brokers[component]['subscriptions'][key] = callback
-        components = self.subscriptions.setdefault(key, dict())
         components[component] = callback
 
     async def unsubscribe(self, component, sender, topic):

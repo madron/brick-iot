@@ -10,14 +10,14 @@ class DispatcherTest(unittest.IsolatedAsyncioTestCase):
         self.dispatcher = Dispatcher(log=self.log)
 
     def test_init(self):
-        self.assertEqual(self.dispatcher.brokers, dict())
+        self.assertEqual(self.dispatcher.callbacks, dict())
 
     def test_get_broker_no_callback(self):
         broker = self.dispatcher.get_broker('test')
         self.assertIsInstance(broker, Broker)
         self.assertEqual(broker.dispatcher, self.dispatcher)
         self.assertEqual(broker.component, 'test')
-        self.assertEqual(self.dispatcher.brokers, dict(test=dict(callback=None, subscriptions=dict())))
+        self.assertEqual(self.dispatcher.callbacks, dict(test=None))
 
     def test_get_broker_callback(self):
         callback = Callback()
@@ -25,7 +25,7 @@ class DispatcherTest(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(broker, Broker)
         self.assertEqual(broker.dispatcher, self.dispatcher)
         self.assertEqual(broker.component, 'test')
-        self.assertEqual(self.dispatcher.brokers, dict(test=dict(callback=callback.function, subscriptions=dict())))
+        self.assertEqual(self.dispatcher.callbacks, dict(test=callback.function))
 
 
 class DispatcherSendTest(unittest.IsolatedAsyncioTestCase):
@@ -94,10 +94,6 @@ class DispatcherSubscribeTest(unittest.IsolatedAsyncioTestCase):
         broker = self.dispatcher.get_broker('test')
         callback = Callback()
         await broker.subscribe(callback.function)
-        # broker
-        subscriptions = self.dispatcher.brokers['test']['subscriptions']
-        self.assertEqual(subscriptions, {(None, None): callback.function})
-        # dispatcher
         subscriptions = self.dispatcher.subscriptions
         self.assertEqual(subscriptions, {(None, None): dict(test=callback.function)})
 
@@ -105,10 +101,6 @@ class DispatcherSubscribeTest(unittest.IsolatedAsyncioTestCase):
         broker = self.dispatcher.get_broker('test')
         callback = Callback()
         await broker.subscribe(callback.function, sender='network')
-        # broker
-        subscriptions = self.dispatcher.brokers['test']['subscriptions']
-        self.assertEqual(subscriptions, {('network', None): callback.function})
-        # dispatcher
         subscriptions = self.dispatcher.subscriptions
         self.assertEqual(subscriptions, {('network', None): dict(test=callback.function)})
 
@@ -116,10 +108,6 @@ class DispatcherSubscribeTest(unittest.IsolatedAsyncioTestCase):
         broker = self.dispatcher.get_broker('test')
         callback = Callback()
         await broker.subscribe(callback.function, topic='alert')
-        # broker
-        subscriptions = self.dispatcher.brokers['test']['subscriptions']
-        self.assertEqual(subscriptions, {(None, 'alert'): callback.function})
-        # dispatcher
         subscriptions = self.dispatcher.subscriptions
         self.assertEqual(subscriptions, {(None, 'alert'): dict(test=callback.function)})
 
@@ -127,10 +115,6 @@ class DispatcherSubscribeTest(unittest.IsolatedAsyncioTestCase):
         broker = self.dispatcher.get_broker('test')
         callback = Callback()
         await broker.subscribe(callback.function, sender='network', topic='connect')
-        # broker
-        subscriptions = self.dispatcher.brokers['test']['subscriptions']
-        self.assertEqual(subscriptions, {('network', 'connect'): callback.function})
-        # dispatcher
         subscriptions = self.dispatcher.subscriptions
         self.assertEqual(subscriptions, {('network', 'connect'): dict(test=callback.function)})
 
