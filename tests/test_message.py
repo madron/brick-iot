@@ -38,6 +38,7 @@ class DispatcherSendTest(unittest.IsolatedAsyncioTestCase):
         callback_3 = Callback()
         broker_1 = self.dispatcher.get_broker('c1', callback_1.function)
         broker_2 = self.dispatcher.get_broker('c2', callback_2.function)
+        broker_3 = self.dispatcher.get_broker('c3', callback_3.function)
         await broker_1.send('c2', 'event')
         self.assertEqual(callback_1.called, [])
         self.assertEqual(callback_2.called, [dict(sender='c1', topic='event', payload=None)])
@@ -158,3 +159,98 @@ class DispatcherSubscribeTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.log.logged[5], ('error', 'Already subscribed - test -> None offline'))
         self.assertEqual(self.log.logged[6], ('error', 'Already subscribed - test -> None None'))
         self.assertEqual(len(self.log.logged), 7)
+
+
+class DispatcherPublishTest(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.log = Logger()
+        self.dispatcher = Dispatcher(log=self.log)
+        self.broker = self.dispatcher.get_broker('c')
+        self.broker_1 = self.dispatcher.get_broker('c1')
+        self.broker_2 = self.dispatcher.get_broker('c2')
+        self.broker_3 = self.dispatcher.get_broker('c3')
+        self.broker_4 = self.dispatcher.get_broker('c4')
+        self.broker_5 = self.dispatcher.get_broker('c5')
+        self.callback_1 = Callback()
+        self.callback_2 = Callback()
+        self.callback_3 = Callback()
+        self.callback_4 = Callback()
+        self.callback_5 = Callback()
+
+    async def test_no_subcribers(self):
+        await self.broker.publish(topic='state', payload='online')
+
+    async def test_subcribe_no_payload(self):
+        await self.broker_1.subscribe(self.callback_1.function)
+        await self.broker.publish(topic='start')
+        self.assertEqual(self.callback_1.called, [dict(sender='c', topic='start', payload=None)])
+
+    async def test_subscribe_everything(self):
+        await self.broker_1.subscribe(self.callback_1.function)
+        await self.broker.publish(topic='state', payload='online')
+        self.assertEqual(self.callback_1.called, [dict(sender='c', topic='state', payload='online')])
+
+    async def test_subscribe_sender(self):
+        await self.broker_1.subscribe(self.callback_1.function, sender='c')
+        await self.broker_2.subscribe(self.callback_2.function, sender='c1')
+        await self.broker.publish(topic='state', payload='online')
+        self.assertEqual(self.callback_1.called, [dict(sender='c', topic='state', payload='online')])
+        self.assertEqual(self.callback_2.called, [])
+
+    async def test_subscribe_topic(self):
+        await self.broker_1.subscribe(self.callback_1.function, topic='state')
+        await self.broker_2.subscribe(self.callback_2.function, topic='another')
+        await self.broker.publish(topic='state', payload='online')
+        self.assertEqual(self.callback_1.called, [dict(sender='c', topic='state', payload='online')])
+        self.assertEqual(self.callback_2.called, [])
+
+    async def test_subscribe_sender_topic(self):
+        await self.broker_1.subscribe(self.callback_1.function, sender='c', topic='state')
+        await self.broker_2.subscribe(self.callback_2.function, sender='c1', topic='state')
+        await self.broker_3.subscribe(self.callback_3.function, sender='c', topic='another')
+        await self.broker_4.subscribe(self.callback_4.function, sender='c1', topic='another')
+        await self.broker.publish(topic='state', payload='online')
+        self.assertEqual(self.callback_1.called, [dict(sender='c', topic='state', payload='online')])
+        self.assertEqual(self.callback_2.called, [])
+        self.assertEqual(self.callback_3.called, [])
+        self.assertEqual(self.callback_4.called, [])
+
+    async def test_subscribe_many(self):
+        await self.broker_1.subscribe(self.callback_1.function)
+        await self.broker_2.subscribe(self.callback_2.function, sender='c')
+        await self.broker_3.subscribe(self.callback_3.function, topic='state')
+        await self.broker_4.subscribe(self.callback_4.function, sender='c', topic='state')
+        await self.broker_5.subscribe(self.callback_5.function, topic='another')
+        await self.broker.publish(topic='state', payload='online')
+        self.assertEqual(self.callback_1.called, [dict(sender='c', topic='state', payload='online')])
+        self.assertEqual(self.callback_2.called, [dict(sender='c', topic='state', payload='online')])
+        self.assertEqual(self.callback_3.called, [dict(sender='c', topic='state', payload='online')])
+        self.assertEqual(self.callback_4.called, [dict(sender='c', topic='state', payload='online')])
+        self.assertEqual(self.callback_5.called, [])
+
+    async def test_callback_exception(self):
+        async def wrong(**kwargs):
+            raise Exception
+        await self.broker_1.subscribe(wrong)
+        await self.broker_2.subscribe(self.callback_2.function)
+        await self.broker.publish(topic='state', payload='online')
+        self.assertEqual(self.log.logged, [('exception', 'Callback error - c1 <- c event')])
+        self.assertEqual(self.callback_2.called, [dict(sender='c', topic='state', payload='online')])
+
+    async def test_callback_exception_typeerror(self):
+        async def wrong(**kwargs):
+            raise TypeError('custom')
+        await self.broker_1.subscribe(wrong)
+        await self.broker_2.subscribe(self.callback_2.function)
+        await self.broker.publish(topic='state', payload='online')
+        self.assertEqual(self.log.logged, [('exception', 'Callback error - c1 <- c event')])
+        self.assertEqual(self.callback_2.called, [dict(sender='c', topic='state', payload='online')])
+
+    async def test_callback_not_async(self):
+        def notasync(**kwargs):
+            return
+        await self.broker_1.subscribe(notasync)
+        await self.broker_2.subscribe(self.callback_2.function)
+        await self.broker.publish(topic='state', payload='online')
+        self.assertEqual(self.log.logged, [('error', 'Callback not async - c1 <- c event')])
+        self.assertEqual(self.callback_2.called, [dict(sender='c', topic='state', payload='online')])
