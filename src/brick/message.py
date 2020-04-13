@@ -15,6 +15,9 @@ class Broker:
     async def subscribe(self, callback, sender=None, topic=None):
         await self.dispatcher.subscribe(self.component, callback, sender=sender, topic=topic)
 
+    async def unsubscribe(self, sender=None, topic=None):
+        await self.dispatcher.unsubscribe(self.component, sender=sender, topic=topic)
+
     async def publish(self, topic, payload=None):
         await self.dispatcher.publish(self.component, topic=topic, payload=payload)
 
@@ -48,6 +51,13 @@ class Dispatcher:
         self.brokers[component]['subscriptions'][key] = callback
         components = self.subscriptions.setdefault(key, dict())
         components[component] = callback
+
+    async def unsubscribe(self, component, sender, topic):
+        key = (sender, topic)
+        components = self.subscriptions.get(key, dict())
+        components.pop(component, None)
+        if not components:
+            self.subscriptions.pop(key, None)
 
     async def publish(self, sender, topic, payload=None):
         recipients = []

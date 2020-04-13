@@ -161,6 +161,61 @@ class DispatcherSubscribeTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.log.logged), 7)
 
 
+class DispatcherUnsubscribeTest(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.log = Logger()
+        self.dispatcher = Dispatcher(log=self.log)
+        self.broker = self.dispatcher.get_broker('test')
+        self.callback = Callback()
+
+    async def test_everything(self):
+        await self.broker.subscribe(self.callback.function)
+        await self.broker.unsubscribe()
+        self.assertEqual(self.dispatcher.subscriptions, dict())
+
+    async def test_sender(self):
+        broker = self.dispatcher.get_broker('test')
+        callback = Callback()
+        await broker.subscribe(callback.function, sender='network')
+        await broker.unsubscribe(sender='network')
+        self.assertEqual(self.dispatcher.subscriptions, dict())
+
+    async def test_topic(self):
+        broker = self.dispatcher.get_broker('test')
+        callback = Callback()
+        await broker.subscribe(callback.function, topic='alert')
+        await broker.unsubscribe(topic='alert')
+        self.assertEqual(self.dispatcher.subscriptions, dict())
+
+    async def test_sender_topic(self):
+        broker = self.dispatcher.get_broker('test')
+        callback = Callback()
+        await broker.subscribe(callback.function, sender='network', topic='connect')
+        await broker.unsubscribe(sender='network', topic='connect')
+        self.assertEqual(self.dispatcher.subscriptions, dict())
+
+    async def test_many(self):
+        broker = self.dispatcher.get_broker('test')
+        callback = Callback()
+        # unsubscribe
+        await broker.subscribe(callback.function, sender='network', topic='connect')
+        await broker.subscribe(callback.function, sender='network', topic='disconnect')
+        await broker.subscribe(callback.function, sender='network')
+        await broker.subscribe(callback.function, sender='mqtt')
+        await broker.subscribe(callback.function, topic='online')
+        await broker.subscribe(callback.function, topic='offline')
+        await broker.subscribe(callback.function)
+        # unsubscribe
+        await broker.unsubscribe(sender='network', topic='connect')
+        await broker.unsubscribe(sender='network', topic='disconnect')
+        await broker.unsubscribe(sender='network')
+        await broker.unsubscribe(sender='mqtt')
+        await broker.unsubscribe(topic='online')
+        await broker.unsubscribe(topic='offline')
+        await broker.unsubscribe()
+        self.assertEqual(self.dispatcher.subscriptions, dict())
+
+
 class DispatcherPublishTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.log = Logger()
