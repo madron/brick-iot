@@ -1,3 +1,4 @@
+import asyncio
 import unittest
 from .test import Callback, Logger
 from brick.message import Broker, Dispatcher
@@ -308,4 +309,33 @@ class DispatcherPublishTest(unittest.IsolatedAsyncioTestCase):
         await self.broker_2.subscribe(self.callback_2.function)
         await self.broker.publish(topic='state', payload='online')
         self.assertEqual(self.log.logged, [('error', 'Callback not async - c1 <- c event')])
+        self.assertEqual(self.callback_2.called, [dict(sender='c', topic='state', payload='online')])
+
+
+
+class DispatcherLongCallbackTest(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.log = Logger()
+        self.dispatcher = Dispatcher(log=self.log)
+        self.callback_1 = Callback(delay=0.01)
+        self.callback_2 = Callback()
+        self.broker = self.dispatcher.get_broker('c')
+        self.broker_1 = self.dispatcher.get_broker('c1', callback=self.callback_1.function)
+        self.broker_2 = self.dispatcher.get_broker('c2', callback=self.callback_2.function)
+
+    async def test_send(self):
+        task = self.broker.send('c1', 'event')
+        self.assertEqual(self.callback_1.called, [])
+        await task
+        self.assertEqual(self.callback_1.called, [dict(sender='c', topic='event', payload=None)])
+
+    async def test_publish(self):
+        await self.broker_1.subscribe(self.callback_1.function)
+        await self.broker_2.subscribe(self.callback_2.function)
+        task = self.broker.publish(topic='state', payload='online')
+        await asyncio.sleep(0.001)
+        self.assertEqual(self.callback_1.called, [])
+        self.assertEqual(self.callback_2.called, [dict(sender='c', topic='state', payload='online')])
+        await task
+        self.assertEqual(self.callback_1.called, [dict(sender='c', topic='state', payload='online')])
         self.assertEqual(self.callback_2.called, [dict(sender='c', topic='state', payload='online')])

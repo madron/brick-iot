@@ -3,10 +3,12 @@ import unittest
 
 
 class Callback:
-    def __init__(self):
+    def __init__(self, delay=0):
+        self.delay = delay
         self.called = []
 
     async def function(self, sender=None, topic=None, payload=None):
+        await asyncio.sleep(self.delay)
         self.called.append(dict(sender=sender, topic=topic, payload=payload))
 
 
