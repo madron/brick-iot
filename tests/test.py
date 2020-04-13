@@ -2,7 +2,7 @@ import asyncio
 import unittest
 
 
-class MessageCallback:
+class Callback:
     def __init__(self):
         self.called = []
 
