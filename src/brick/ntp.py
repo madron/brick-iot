@@ -40,13 +40,16 @@ class NtpClient:
 
 
 class NtpSync:
-    def __init__(self, log, host='pool.ntp.org', timezone=0, delay=86400, fail_delay=10):
+    def __init__(self, log, broker, host='pool.ntp.org', timezone=0, delay=86400, fail_delay=10):
         self.ntp_client = NtpClient(host=host, timezone_callback=self.timezone_callback)
         self.host = host
         self.timezone = timezone
         self.delay = delay
         self.fail_delay = fail_delay
         self.log = log
+        self.broker = broker
+        self.broker.subscribe(self.start, 'network', 'connect')
+        self.broker.subscribe(self.stop, 'network', 'disconnect')
         # Task
         self.task = None
         self.loop = asyncio.get_event_loop()
@@ -54,7 +57,7 @@ class NtpSync:
     def timezone_callback(self, timestamp):
         return timestamp + (self.timezone * 3600)
 
-    async def start(self):
+    async def start(self, **kwargs):
         self.log.info('Started. Host: {} - delay: {}'.format(self.host, self.delay))
         self.task = asyncio.create_task(self.start_loop())
         await asyncio.sleep(0)
@@ -79,7 +82,7 @@ class NtpSync:
         asyncio.create_task(self.stop(delay))
         await asyncio.sleep(0)
 
-    async def stop(self, delay=0):
+    async def stop(self, delay=0, **kwargs):
         await asyncio.sleep(delay)
         self.task.cancel()
         await asyncio.sleep(0)

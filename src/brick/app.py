@@ -3,6 +3,7 @@ import uasyncio as asyncio
 from brick import web
 from brick.config import get_config
 from brick.logging import LogCollector, StdoutLogConsumer
+from brick.message import Dispatcher
 from brick.mqtt import MQTTManager
 from brick.networking import NetworkManager
 from brick.ntp import NtpSync
@@ -27,11 +28,17 @@ class Application:
             components=log_config.get('components', dict()),
         )
         self.log = self.log_collector.get_logger('app')
+        # Dispatcher
+        self.dispatcher = Dispatcher(self.log_collector.get_logger('dispatcher'))
         # Network
         self.network = self.get_network_manager()
         # Ntp
         ntp_config = self.network.config.get('ntp', dict())
-        self.ntp = NtpSync(self.log_collector.get_logger('ntp'), **ntp_config)
+        self.ntp = NtpSync(
+            self.log_collector.get_logger('ntp'),
+            self.dispatcher.get_broker('ntp'),
+            **ntp_config,
+        )
         # Web server
         self.webserver = web.Server(log=self.log_collector.get_logger('web'))
         self.webserver_task = None
@@ -43,12 +50,9 @@ class Application:
             interface = self.config.get('interface', 'wifi')
         return NetworkManager(
             log=self.log_collector.get_logger('network'),
+            broker=self.dispatcher.get_broker('network'),
             interface=interface,
             config=self.config.get('network', dict()),
-            on_start=self.on_network_start,
-            on_stop=self.on_network_stop,
-            on_connect=self.on_network_connect,
-            on_disconnect=self.on_network_disconnect,
         )
 
     def start(self):
@@ -88,18 +92,6 @@ class Application:
 
     async def on_connect(self):
         self.loop.create_task(self.write_timestamp())
-
-    async def on_network_start(self, **kwargs):
-        pass
-
-    async def on_network_stop(self, **kwargs):
-        pass
-
-    async def on_network_connect(self, **kwargs):
-        await self.ntp.start()
-
-    async def on_network_disconnect(self, **kwargs):
-        await self.ntp.stop()
 
     async def on_message(self, topic, payload):
         if topic == 'color':

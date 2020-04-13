@@ -5,18 +5,14 @@ import utime
 
 
 class NetworkManager:
-    def __init__(self, log, interface='wifi', config=dict(),
+    def __init__(self, log, broker, interface='wifi', config=dict(),
                  on_start=None, on_stop=None, on_connect=None, on_disconnect=None):
         self.log = log
+        self.broker = broker
         self.interface_name = interface
         self.config = config.get(interface, dict())
         self.check_delay = self.config.get('check_delay', 1)
         self.fail_delay = self.config.get('fail_delay', 30)
-        # Callback functions
-        self.on_start_callback = on_start
-        self.on_stop_callback = on_stop
-        self.on_connect_callback = on_connect
-        self.on_disconnect_callback = on_disconnect
         # State
         self.interface = None
         self.connecting = False
@@ -35,32 +31,28 @@ class NetworkManager:
         if kwargs:
             message = '{} {}'.format(message, kwargs)
         self.log.info(message)
-        if self.on_start_callback:
-            asyncio.create_task(self.callback_wrapper(self.on_start_callback(**kwargs)))
+        await self.broker.publish('start')
 
     async def on_stop(self, **kwargs):
         message = 'Stopped'
         if kwargs:
             message = '{} {}'.format(message, kwargs)
         self.log.info(message)
-        if self.on_stop_callback:
-            asyncio.create_task(self.callback_wrapper(self.on_stop_callback(**kwargs)))
+        await self.broker.publish('stop')
 
     async def on_connect(self, **kwargs):
         message = 'Connected'
         if kwargs:
             message = '{} {}'.format(message, kwargs)
         self.log.info(message)
-        if self.on_connect_callback:
-            asyncio.create_task(self.callback_wrapper(self.on_connect_callback(**kwargs)))
+        await self.broker.publish('connect', payload=kwargs)
 
     async def on_disconnect(self, **kwargs):
         message = 'Disconnected'
         if kwargs:
             message = '{} {}'.format(message, kwargs)
         self.log.info(message)
-        if self.on_disconnect_callback:
-            asyncio.create_task(self.callback_wrapper(self.on_disconnect_callback(**kwargs)))
+        await self.broker.publish('disconnect', payload=kwargs)
 
     async def start(self, delay=0):
         await asyncio.sleep(delay)
@@ -88,7 +80,7 @@ class NetworkManager:
 
     async def stop_later(self, delay):
         self.log.info('Stopping in {} seconds'.format(delay))
-        self.stop(delay)
+        asyncio.create_task(self.stop(delay))
         await asyncio.sleep(0)
 
     async def check_connection(self):
