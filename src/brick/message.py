@@ -1,5 +1,5 @@
 try:
-    from uasyncio import asyncio
+    import uasyncio as asyncio
 except ImportError:
     import asyncio
 
@@ -12,11 +12,11 @@ class Broker:
     def send(self, recipient, topic, payload=None):
         return self.dispatcher.send(self.component, recipient, topic, payload=payload)
 
-    async def subscribe(self, callback, sender=None, topic=None):
-        await self.dispatcher.subscribe(self.component, callback, sender=sender, topic=topic)
+    def subscribe(self, callback, sender=None, topic=None):
+        return self.dispatcher.subscribe(self.component, callback, sender=sender, topic=topic)
 
-    async def unsubscribe(self, sender=None, topic=None):
-        await self.dispatcher.unsubscribe(self.component, sender=sender, topic=topic)
+    def unsubscribe(self, sender=None, topic=None):
+        return self.dispatcher.unsubscribe(self.component, sender=sender, topic=topic)
 
     def publish(self, topic, payload=None):
         return self.dispatcher.publish(self.component, topic=topic, payload=payload)
@@ -33,6 +33,7 @@ class Dispatcher:
         return Broker(self, component)
 
     def send(self, sender, recipient, topic, payload=None):
+        self.log.debug('send - {} -> {} - {} {}'.format(sender, recipient, topic, payload))
         if recipient in self.callbacks:
             callback = self.callbacks[recipient]
             if bool(callback):
@@ -45,13 +46,15 @@ class Dispatcher:
             self.log.error('No recipient - {} -> {}'.format(sender, recipient))
         return asyncio.sleep(0)
 
-    async def subscribe(self, component, callback, sender, topic):
+    def subscribe(self, component, callback, sender, topic):
+        self.log.debug('subscribe - {} - {} {}'.format(component, sender, topic))
         components = self.subscriptions.setdefault((sender, topic), dict())
         if component in components:
             self.log.error('Already subscribed - {} -> {} {}'.format(component, sender, topic))
         components[component] = callback
 
-    async def unsubscribe(self, component, sender, topic):
+    def unsubscribe(self, component, sender, topic):
+        self.log.debug('unsubscribe - {} - {} {}'.format(component, sender, topic))
         key = (sender, topic)
         components = self.subscriptions.get(key, dict())
         components.pop(component, None)
@@ -59,6 +62,7 @@ class Dispatcher:
             self.subscriptions.pop(key, None)
 
     def publish(self, sender, topic, payload=None):
+        self.log.debug('publish - {} - {} {}'.format(sender, topic, payload))
         recipients = []
         for key in [(sender, topic), (sender, None), (None, topic), (None, None)]:
             for component, callback in self.subscriptions.get(key, dict()).items():

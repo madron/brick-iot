@@ -89,49 +89,49 @@ class DispatcherSubscribeTest(unittest.IsolatedAsyncioTestCase):
     async def test_everything(self):
         broker = self.dispatcher.get_broker('test')
         callback = Callback()
-        await broker.subscribe(callback.function)
+        broker.subscribe(callback.function)
         subscriptions = self.dispatcher.subscriptions
         self.assertEqual(subscriptions, {(None, None): dict(test=callback.function)})
 
     async def test_sender(self):
         broker = self.dispatcher.get_broker('test')
         callback = Callback()
-        await broker.subscribe(callback.function, sender='network')
+        broker.subscribe(callback.function, sender='network')
         subscriptions = self.dispatcher.subscriptions
         self.assertEqual(subscriptions, {('network', None): dict(test=callback.function)})
 
     async def test_topic(self):
         broker = self.dispatcher.get_broker('test')
         callback = Callback()
-        await broker.subscribe(callback.function, topic='alert')
+        broker.subscribe(callback.function, topic='alert')
         subscriptions = self.dispatcher.subscriptions
         self.assertEqual(subscriptions, {(None, 'alert'): dict(test=callback.function)})
 
     async def test_sender_topic(self):
         broker = self.dispatcher.get_broker('test')
         callback = Callback()
-        await broker.subscribe(callback.function, sender='network', topic='connect')
+        broker.subscribe(callback.function, sender='network', topic='connect')
         subscriptions = self.dispatcher.subscriptions
         self.assertEqual(subscriptions, {('network', 'connect'): dict(test=callback.function)})
 
     async def test_already_subscribed(self):
         broker = self.dispatcher.get_broker('test')
         callback = Callback()
-        await broker.subscribe(callback.function, sender='network', topic='connect')
-        await broker.subscribe(callback.function, sender='network', topic='disconnect')
-        await broker.subscribe(callback.function, sender='network')
-        await broker.subscribe(callback.function, sender='mqtt')
-        await broker.subscribe(callback.function, topic='online')
-        await broker.subscribe(callback.function, topic='offline')
-        await broker.subscribe(callback.function)
+        broker.subscribe(callback.function, sender='network', topic='connect')
+        broker.subscribe(callback.function, sender='network', topic='disconnect')
+        broker.subscribe(callback.function, sender='network')
+        broker.subscribe(callback.function, sender='mqtt')
+        broker.subscribe(callback.function, topic='online')
+        broker.subscribe(callback.function, topic='offline')
+        broker.subscribe(callback.function)
         self.assertEqual(self.log.logged, [])
-        await broker.subscribe(callback.function, sender='network', topic='connect')
-        await broker.subscribe(callback.function, sender='network', topic='disconnect')
-        await broker.subscribe(callback.function, sender='network')
-        await broker.subscribe(callback.function, sender='mqtt')
-        await broker.subscribe(callback.function, topic='online')
-        await broker.subscribe(callback.function, topic='offline')
-        await broker.subscribe(callback.function)
+        broker.subscribe(callback.function, sender='network', topic='connect')
+        broker.subscribe(callback.function, sender='network', topic='disconnect')
+        broker.subscribe(callback.function, sender='network')
+        broker.subscribe(callback.function, sender='mqtt')
+        broker.subscribe(callback.function, topic='online')
+        broker.subscribe(callback.function, topic='offline')
+        broker.subscribe(callback.function)
         self.assertEqual(self.log.logged[0], ('error', 'Already subscribed - test -> network connect'))
         self.assertEqual(self.log.logged[1], ('error', 'Already subscribed - test -> network disconnect'))
         self.assertEqual(self.log.logged[2], ('error', 'Already subscribed - test -> network None'))
@@ -150,50 +150,50 @@ class DispatcherUnsubscribeTest(unittest.IsolatedAsyncioTestCase):
         self.callback = Callback()
 
     async def test_everything(self):
-        await self.broker.subscribe(self.callback.function)
-        await self.broker.unsubscribe()
+        self.broker.subscribe(self.callback.function)
+        self.broker.unsubscribe()
         self.assertEqual(self.dispatcher.subscriptions, dict())
 
     async def test_sender(self):
         broker = self.dispatcher.get_broker('test')
         callback = Callback()
-        await broker.subscribe(callback.function, sender='network')
-        await broker.unsubscribe(sender='network')
+        broker.subscribe(callback.function, sender='network')
+        broker.unsubscribe(sender='network')
         self.assertEqual(self.dispatcher.subscriptions, dict())
 
     async def test_topic(self):
         broker = self.dispatcher.get_broker('test')
         callback = Callback()
-        await broker.subscribe(callback.function, topic='alert')
-        await broker.unsubscribe(topic='alert')
+        broker.subscribe(callback.function, topic='alert')
+        broker.unsubscribe(topic='alert')
         self.assertEqual(self.dispatcher.subscriptions, dict())
 
     async def test_sender_topic(self):
         broker = self.dispatcher.get_broker('test')
         callback = Callback()
-        await broker.subscribe(callback.function, sender='network', topic='connect')
-        await broker.unsubscribe(sender='network', topic='connect')
+        broker.subscribe(callback.function, sender='network', topic='connect')
+        broker.unsubscribe(sender='network', topic='connect')
         self.assertEqual(self.dispatcher.subscriptions, dict())
 
     async def test_many(self):
         broker = self.dispatcher.get_broker('test')
         callback = Callback()
         # unsubscribe
-        await broker.subscribe(callback.function, sender='network', topic='connect')
-        await broker.subscribe(callback.function, sender='network', topic='disconnect')
-        await broker.subscribe(callback.function, sender='network')
-        await broker.subscribe(callback.function, sender='mqtt')
-        await broker.subscribe(callback.function, topic='online')
-        await broker.subscribe(callback.function, topic='offline')
-        await broker.subscribe(callback.function)
+        broker.subscribe(callback.function, sender='network', topic='connect')
+        broker.subscribe(callback.function, sender='network', topic='disconnect')
+        broker.subscribe(callback.function, sender='network')
+        broker.subscribe(callback.function, sender='mqtt')
+        broker.subscribe(callback.function, topic='online')
+        broker.subscribe(callback.function, topic='offline')
+        broker.subscribe(callback.function)
         # unsubscribe
-        await broker.unsubscribe(sender='network', topic='connect')
-        await broker.unsubscribe(sender='network', topic='disconnect')
-        await broker.unsubscribe(sender='network')
-        await broker.unsubscribe(sender='mqtt')
-        await broker.unsubscribe(topic='online')
-        await broker.unsubscribe(topic='offline')
-        await broker.unsubscribe()
+        broker.unsubscribe(sender='network', topic='connect')
+        broker.unsubscribe(sender='network', topic='disconnect')
+        broker.unsubscribe(sender='network')
+        broker.unsubscribe(sender='mqtt')
+        broker.unsubscribe(topic='online')
+        broker.unsubscribe(topic='offline')
+        broker.unsubscribe()
         self.assertEqual(self.dispatcher.subscriptions, dict())
 
 
@@ -217,34 +217,34 @@ class DispatcherPublishTest(unittest.IsolatedAsyncioTestCase):
         await self.broker.publish(topic='state', payload='online')
 
     async def test_subcribe_no_payload(self):
-        await self.broker_1.subscribe(self.callback_1.function)
+        self.broker_1.subscribe(self.callback_1.function)
         await self.broker.publish(topic='start')
         self.assertEqual(self.callback_1.called, [dict(sender='c', topic='start', payload=None)])
 
     async def test_subscribe_everything(self):
-        await self.broker_1.subscribe(self.callback_1.function)
+        self.broker_1.subscribe(self.callback_1.function)
         await self.broker.publish(topic='state', payload='online')
         self.assertEqual(self.callback_1.called, [dict(sender='c', topic='state', payload='online')])
 
     async def test_subscribe_sender(self):
-        await self.broker_1.subscribe(self.callback_1.function, sender='c')
-        await self.broker_2.subscribe(self.callback_2.function, sender='c1')
+        self.broker_1.subscribe(self.callback_1.function, sender='c')
+        self.broker_2.subscribe(self.callback_2.function, sender='c1')
         await self.broker.publish(topic='state', payload='online')
         self.assertEqual(self.callback_1.called, [dict(sender='c', topic='state', payload='online')])
         self.assertEqual(self.callback_2.called, [])
 
     async def test_subscribe_topic(self):
-        await self.broker_1.subscribe(self.callback_1.function, topic='state')
-        await self.broker_2.subscribe(self.callback_2.function, topic='another')
+        self.broker_1.subscribe(self.callback_1.function, topic='state')
+        self.broker_2.subscribe(self.callback_2.function, topic='another')
         await self.broker.publish(topic='state', payload='online')
         self.assertEqual(self.callback_1.called, [dict(sender='c', topic='state', payload='online')])
         self.assertEqual(self.callback_2.called, [])
 
     async def test_subscribe_sender_topic(self):
-        await self.broker_1.subscribe(self.callback_1.function, sender='c', topic='state')
-        await self.broker_2.subscribe(self.callback_2.function, sender='c1', topic='state')
-        await self.broker_3.subscribe(self.callback_3.function, sender='c', topic='another')
-        await self.broker_4.subscribe(self.callback_4.function, sender='c1', topic='another')
+        self.broker_1.subscribe(self.callback_1.function, sender='c', topic='state')
+        self.broker_2.subscribe(self.callback_2.function, sender='c1', topic='state')
+        self.broker_3.subscribe(self.callback_3.function, sender='c', topic='another')
+        self.broker_4.subscribe(self.callback_4.function, sender='c1', topic='another')
         await self.broker.publish(topic='state', payload='online')
         self.assertEqual(self.callback_1.called, [dict(sender='c', topic='state', payload='online')])
         self.assertEqual(self.callback_2.called, [])
@@ -252,11 +252,11 @@ class DispatcherPublishTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.callback_4.called, [])
 
     async def test_subscribe_many(self):
-        await self.broker_1.subscribe(self.callback_1.function)
-        await self.broker_2.subscribe(self.callback_2.function, sender='c')
-        await self.broker_3.subscribe(self.callback_3.function, topic='state')
-        await self.broker_4.subscribe(self.callback_4.function, sender='c', topic='state')
-        await self.broker_5.subscribe(self.callback_5.function, topic='another')
+        self.broker_1.subscribe(self.callback_1.function)
+        self.broker_2.subscribe(self.callback_2.function, sender='c')
+        self.broker_3.subscribe(self.callback_3.function, topic='state')
+        self.broker_4.subscribe(self.callback_4.function, sender='c', topic='state')
+        self.broker_5.subscribe(self.callback_5.function, topic='another')
         await self.broker.publish(topic='state', payload='online')
         self.assertEqual(self.callback_1.called, [dict(sender='c', topic='state', payload='online')])
         self.assertEqual(self.callback_2.called, [dict(sender='c', topic='state', payload='online')])
@@ -267,8 +267,8 @@ class DispatcherPublishTest(unittest.IsolatedAsyncioTestCase):
     async def test_callback_exception(self):
         async def wrong(**kwargs):
             raise Exception
-        await self.broker_1.subscribe(wrong)
-        await self.broker_2.subscribe(self.callback_2.function)
+        self.broker_1.subscribe(wrong)
+        self.broker_2.subscribe(self.callback_2.function)
         await self.broker.publish(topic='state', payload='online')
         self.assertEqual(self.log.logged, [('exception', 'Callback error - c1 <- c event')])
         self.assertEqual(self.callback_2.called, [dict(sender='c', topic='state', payload='online')])
@@ -276,8 +276,8 @@ class DispatcherPublishTest(unittest.IsolatedAsyncioTestCase):
     async def test_callback_exception_typeerror(self):
         async def wrong(**kwargs):
             raise TypeError('custom')
-        await self.broker_1.subscribe(wrong)
-        await self.broker_2.subscribe(self.callback_2.function)
+        self.broker_1.subscribe(wrong)
+        self.broker_2.subscribe(self.callback_2.function)
         await self.broker.publish(topic='state', payload='online')
         self.assertEqual(self.log.logged, [('exception', 'Callback error - c1 <- c event')])
         self.assertEqual(self.callback_2.called, [dict(sender='c', topic='state', payload='online')])
@@ -285,8 +285,8 @@ class DispatcherPublishTest(unittest.IsolatedAsyncioTestCase):
     async def test_callback_not_async(self):
         def notasync(**kwargs):
             return
-        await self.broker_1.subscribe(notasync)
-        await self.broker_2.subscribe(self.callback_2.function)
+        self.broker_1.subscribe(notasync)
+        self.broker_2.subscribe(self.callback_2.function)
         await self.broker.publish(topic='state', payload='online')
         self.assertEqual(self.log.logged, [('error', 'Callback not async - c1 <- c event')])
         self.assertEqual(self.callback_2.called, [dict(sender='c', topic='state', payload='online')])
@@ -310,8 +310,8 @@ class DispatcherLongCallbackTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.callback_1.called, [dict(sender='c', topic='event', payload=None)])
 
     async def test_publish(self):
-        await self.broker_1.subscribe(self.callback_1.function)
-        await self.broker_2.subscribe(self.callback_2.function)
+        self.broker_1.subscribe(self.callback_1.function)
+        self.broker_2.subscribe(self.callback_2.function)
         task = self.broker.publish(topic='state', payload='online')
         await asyncio.sleep(0.001)
         self.assertEqual(self.callback_1.called, [])
