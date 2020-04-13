@@ -4,6 +4,7 @@ from brick.device import test
 
 DEVICE_CLASS = {
     'test-random': test.Random,
+    'test-state-publish': test.StatePublish,
 }
 
 

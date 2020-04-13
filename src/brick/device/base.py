@@ -4,32 +4,59 @@ import uasyncio as asyncio
 class Device:
     async def start(self):
         self.log.debug('Started')
-        self._main_task = asyncio.create_task(self._main_loop_wrapper())
+        await self._setup()
+        self._task = asyncio.create_task(self._loop())
 
     async def stop(self):
-        self._main_task.cancel()
+        await self._teardown()
+        self._task.cancel()
         self.log.debug('Stopped')
 
-    async def _main_loop_wrapper(self):
+    async def _setup(self):
         # Check log and broker
         assert bool(self.log)
         assert bool(self.broker)
         # State
         self._state = dict()
+        self._subscriptions = dict()
+        await self.setup()
+
+    async def _teardown(self):
+        await self.teardown()
+        for sender, topic in self._subscriptions.keys():
+            self.broker.unsubscribe(sender, topic)
+        self._subscriptions = dict()
+
+    async def _loop(self):
         while True:
             try:
-                await self.main_loop()
-                self.log.warning('main_loop should run forever')
+                await self.loop()
+                self.log.warning('loop should run forever')
             except Exception as error:
-                self.log.exception('main_loop error', error)
+                self.log.exception('loop error', error)
             await asyncio.sleep(10)
+
+    async def publish_state(self, **kwargs):
+        self.log.debug('publish_state')
+        for topic, payload in self._state.items():
+            self.broker.publish(topic=topic, payload=payload)
 
     def set_state(self, topic, payload):
         self.log.debug('{} {}'.format(topic, payload))
         self._state[topic] = payload
         self.broker.publish(topic=topic, payload=payload)
 
-    async def main_loop(self):
+    def subscribe(self, callback, sender=None, topic=None):
+        self.broker.subscribe(callback, sender=sender, topic=topic)
+        self._subscriptions[(sender, topic)] = callback
+
+    async def setup(self):
+        pass
+
+    async def teardown(self):
+        pass
+
+    async def loop(self):
         while True:
             await asyncio.sleep(10)
 
