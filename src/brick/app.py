@@ -1,7 +1,9 @@
+import sys
 import utime
 import uasyncio as asyncio
 from brick import web
 from brick.config import get_config
+from brick.device.manager import DeviceManager
 from brick.logging import LogCollector, StdoutLogConsumer
 from brick.message import Dispatcher
 from brick.mqtt import MQTTManager
@@ -30,6 +32,12 @@ class Application:
         self.log = self.log_collector.get_logger('app')
         # Dispatcher
         self.dispatcher = Dispatcher(self.log_collector.get_logger('dispatcher'))
+        # Device
+        self.device = DeviceManager(
+            self.log_collector,
+            self.dispatcher,
+            self.config.get('devices', dict()),
+        )
         # Network
         self.network = self.get_network_manager()
         # Ntp
@@ -61,7 +69,7 @@ class Application:
             self.loop.run_forever()
         except Exception as error:
             traceback = get_traceback(error)
-            print(traceback)
+            sys.stdout.write(traceback)
             with open("error.log", "a") as error_log:
                 error_log.write('{} '.format(get_iso_timestamp()))
                 error_log.write(traceback)
@@ -79,6 +87,7 @@ class Application:
         self.webserver_task = self.webserver.start()
 
     async def normal_mode(self):
+        await self.device.start()
         self.mqtt = MQTTManager(name=self.name, config=self.mqtt_config, network=self.network,
                                 connect_callback=self.on_connect, message_callback=self.on_message)
         # await self.mqtt.start()
