@@ -46,19 +46,15 @@ class DispatcherSendTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(callback_3.called, [])
 
     async def test_no_callback(self):
-        log = Logger(level='debug')
-        dispatcher = Dispatcher(log=log)
-        broker_1 = dispatcher.get_broker('c1')
-        broker_2 = dispatcher.get_broker('c2')
+        broker_1 = self.dispatcher.get_broker('c1')
+        broker_2 = self.dispatcher.get_broker('c2')
         await broker_1.send('c2', 'command')
-        self.assertEqual(log.logged, [('debug', 'No callback - c1 -> c2' )])
+        self.assertEqual(self.log.logged, [('error', 'No callback - c1 -> c2' )])
 
     async def test_no_recipient(self):
-        log = Logger(level='debug')
-        dispatcher = Dispatcher(log=log)
-        broker = dispatcher.get_broker('component')
+        broker = self.dispatcher.get_broker('component')
         await broker.send('doesnotexist', 'command')
-        self.assertEqual(log.logged, [('debug', 'No recipient - component -> doesnotexist' )])
+        self.assertEqual(self.log.logged, [('error', 'No recipient - component -> doesnotexist' )])
 
     async def test_callback_exception(self):
         async def wrong(**kwargs):

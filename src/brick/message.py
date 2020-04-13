@@ -40,9 +40,9 @@ class Dispatcher:
                 coro = self._callback_wrapper(log_context, callback, sender=sender, topic=topic, payload=payload)
                 return asyncio.create_task(coro)
             else:
-                self.log.debug('No callback - {} -> {}'.format(sender, recipient))
+                self.log.error('No callback - {} -> {}'.format(sender, recipient))
         else:
-            self.log.debug('No recipient - {} -> {}'.format(sender, recipient))
+            self.log.error('No recipient - {} -> {}'.format(sender, recipient))
         return asyncio.sleep(0)
 
     async def subscribe(self, component, callback, sender, topic):
