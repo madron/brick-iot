@@ -40,5 +40,5 @@ class Logger:
     def error(self, msg):
         self.append(msg, 'error')
 
-    def exception(self, msg, exc_info=False):
+    def exception(self, msg, error):
         self.append(msg, 'exception')

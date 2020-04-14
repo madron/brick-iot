@@ -88,6 +88,6 @@ class Dispatcher:
             if description == "object NoneType can't be used in 'await' expression":
                 self.log.error('Callback not async{}'.format(log_context))
             else:
-                self.log.exception('Callback error{}'.format(log_context))
+                self.log.exception('Callback error{}'.format(log_context), error)
         except Exception as error:
-            self.log.exception('Callback error{}'.format(log_context))
+            self.log.exception('Callback error{}'.format(log_context), error)
