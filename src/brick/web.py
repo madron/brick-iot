@@ -63,10 +63,15 @@ class Server(WebApp):
     def log_lines(self, request, response):
         headers = {'Cache-Control': 'no-cache'}
         yield from start_response(response, content_type='text/event-stream', headers=headers)
+        collector = LogLineCollector()
         try:
-            collector = LogLineCollector()
-            consumer_id = self.log_collector.add_consumer(collector.callback, level='info', components=dict())
+            consumer_id = self.log_collector.add_consumer(collector.callback, level='debug', components=dict())
             yield from collector.stream(response)
+        except OSError:
+            self.log.info('Client closed connection.')
+            pass
+        except Exception as error:
+            self.log.exception('log_lines error', error)
         finally:
             self.log_collector.remove_consumer(consumer_id)
 

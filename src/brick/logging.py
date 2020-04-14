@@ -55,6 +55,9 @@ class Logger:
         self.log(ERROR, message, *args)
         self.log(ERROR, traceback, *args)
 
+    def exc(self, error, message, *args, **kwargs):
+        self.exception(message, error, *args, **kwargs)
+
 
 class LogCollector:
     def __init__(self):
