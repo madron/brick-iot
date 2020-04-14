@@ -1,3 +1,4 @@
+{% args level %}
 <!DOCTYPE html>
 <html lang=en>
     <head>
@@ -13,7 +14,7 @@
                 var lines = [];
                 var text_lines = '';
                 var textarea = document.getElementById('log');
-                var source = new EventSource('/log/lines');
+                var source = new EventSource('/log/lines/{{ level}}/');
                 source.onmessage = function(event) {
                     lines.push(event.data) ;
                     if (lines.length > 100) {

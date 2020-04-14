@@ -1,4 +1,5 @@
 import gc
+import ure as re
 import uasyncio as asyncio
 from picoweb import WebApp, start_response
 from brick import config
@@ -8,9 +9,10 @@ from brick.logging import LEVEL_NAME
 class Server(WebApp):
     def __init__(self, log_collector, **kwargs):
         routes = [
-            ('/', self.index),
-            ('/log', self.log),
-            ('/log/lines', self.log_lines),
+            (re.compile("^/$"), self.index),
+            (re.compile("^/log/lines/(info|debug|warning)[/]?$"), self.log_lines),
+            (re.compile("^/log/(info|debug|warning)[/]?$"), self.log),
+            (re.compile("^/log[/]?$"), self.log_redirect),
         ]
         kwargs['routes'] = routes
         super().__init__(None, **kwargs)
@@ -56,16 +58,21 @@ class Server(WebApp):
         yield from self.render_template(response, 'config.html', (error, config_text))
         return
 
+    def log_redirect(self, request, response):
+        yield from self.redirect(response, '/log/info/')
+
     def log(self, request, response):
+        level = request.url_match.group(1)
         yield from start_response(response)
-        yield from self.render_template(response, 'log.html', ())
+        yield from self.render_template(response, 'log.html', (level,))
 
     def log_lines(self, request, response):
+        level = request.url_match.group(1)
         headers = {'Cache-Control': 'no-cache'}
         yield from start_response(response, content_type='text/event-stream', headers=headers)
         collector = LogLineCollector()
         try:
-            consumer_id = self.log_collector.add_consumer(collector.callback, level='debug', components=dict())
+            consumer_id = self.log_collector.add_consumer(collector.callback, level=level, components=dict())
             yield from collector.stream(response)
         except OSError:
             self.log.info('Client closed connection.')
