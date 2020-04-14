@@ -10,6 +10,7 @@ class Server(WebApp):
     def __init__(self, log_collector, **kwargs):
         routes = [
             (re.compile("^/$"), self.index),
+            (re.compile("^/config[/]?$"), self.config),
             (re.compile("^/log/lines/(info|debug|warning)[/]?$"), self.log_lines),
             (re.compile("^/log/(info|debug|warning)[/]?$"), self.log),
             (re.compile("^/log[/]?$"), self.log_redirect),
@@ -36,6 +37,10 @@ class Server(WebApp):
         yield from start_response(response, status=302, headers=dict(Location=location))
 
     def index(self, request, response):
+        yield from start_response(response)
+        yield from self.render_template(response, 'index.html', ())
+
+    def config(self, request, response):
         gc.collect()
         success_url = '/'
         method = request.method
