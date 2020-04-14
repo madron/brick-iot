@@ -4,6 +4,7 @@ import uasyncio as asyncio
 from picoweb import WebApp, start_response
 from brick import config
 from brick.logging import LEVEL_NAME
+from brick.utils import get_iso_timestamp
 
 
 class Server(WebApp):
@@ -97,10 +98,10 @@ class LogLineCollector():
         while True:
             await self.event.wait()
             if self.line:
-                yield from response.awrite('data: {level} {component} {message}\n\n'.format(**self.line))
+                yield from response.awrite('data: {timestamp} {level} {component} {message}\n\n'.format(**self.line))
                 self.line = None
             self.event.clear()
 
-    async def callback(self, level, component, message, *args, **kwargs):
-        self.line = dict(level=LEVEL_NAME[level].upper(), component=component, message=message)
+    async def callback(self, timestamp, level, component, message, *args, **kwargs):
+        self.line = dict(timestamp=get_iso_timestamp(timestamp), level=LEVEL_NAME[level].upper(), component=component, message=message)
         self.event.set()

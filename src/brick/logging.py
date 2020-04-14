@@ -1,5 +1,6 @@
 import sys
 import uasyncio as asyncio
+import utime
 from uuid import uuid4
 from brick.utils import get_iso_timestamp, get_traceback
 
@@ -65,9 +66,10 @@ class LogCollector:
         self.loop = asyncio.get_event_loop()
 
     def log(self, level, component, message, *args, **kwargs):
+        timestamp = utime.time()
         for consumer in self.consumers.values():
             if level >= consumer['components'].get(component, consumer['level']):
-                self.loop.create_task(consumer['callback'](level, component, message, *args, **kwargs))
+                self.loop.create_task(consumer['callback'](timestamp, level, component, message, *args, **kwargs))
 
     def get_logger(self, component):
         return Logger(self, component)
@@ -89,9 +91,9 @@ class StdoutLogConsumer:
     def __init__(self, log_collector, level='info', components=dict()):
         log_collector.add_consumer(self.log, level=level, components=components)
 
-    async def log(self, level, component, message, *args, **kwargs):
+    async def log(self, timestamp, level, component, message, *args, **kwargs):
         sys.stdout.write('{} {:8s} {}: {}\n'.format(
-            get_iso_timestamp(),
+            get_iso_timestamp(timestamp),
             LEVEL_NAME[level].upper(),
             component,
             message,
