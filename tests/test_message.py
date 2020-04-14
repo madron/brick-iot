@@ -132,13 +132,13 @@ class DispatcherSubscribeTest(unittest.IsolatedAsyncioTestCase):
         broker.subscribe(callback.function, topic='online')
         broker.subscribe(callback.function, topic='offline')
         broker.subscribe(callback.function)
-        self.assertEqual(self.log.logged[0], ('error', 'Already subscribed - test -> network connect'))
-        self.assertEqual(self.log.logged[1], ('error', 'Already subscribed - test -> network disconnect'))
-        self.assertEqual(self.log.logged[2], ('error', 'Already subscribed - test -> network None'))
-        self.assertEqual(self.log.logged[3], ('error', 'Already subscribed - test -> mqtt None'))
-        self.assertEqual(self.log.logged[4], ('error', 'Already subscribed - test -> None online'))
-        self.assertEqual(self.log.logged[5], ('error', 'Already subscribed - test -> None offline'))
-        self.assertEqual(self.log.logged[6], ('error', 'Already subscribed - test -> None None'))
+        self.assertEqual(self.log.logged[0], ('error', 'Already subscribed - test -> network/connect'))
+        self.assertEqual(self.log.logged[1], ('error', 'Already subscribed - test -> network/disconnect'))
+        self.assertEqual(self.log.logged[2], ('error', 'Already subscribed - test -> network/None'))
+        self.assertEqual(self.log.logged[3], ('error', 'Already subscribed - test -> mqtt/None'))
+        self.assertEqual(self.log.logged[4], ('error', 'Already subscribed - test -> None/online'))
+        self.assertEqual(self.log.logged[5], ('error', 'Already subscribed - test -> None/offline'))
+        self.assertEqual(self.log.logged[6], ('error', 'Already subscribed - test -> None/None'))
         self.assertEqual(len(self.log.logged), 7)
 
 
@@ -270,7 +270,7 @@ class DispatcherPublishTest(unittest.IsolatedAsyncioTestCase):
         self.broker_1.subscribe(wrong)
         self.broker_2.subscribe(self.callback_2.function)
         await self.broker.publish(topic='state', payload='online')
-        self.assertEqual(self.log.logged, [('exception', 'Callback error - c1 <- c event')])
+        self.assertEqual(self.log.logged, [('exception', 'Callback error - c1 <- c/state')])
         self.assertEqual(self.callback_2.called, [dict(sender='c', topic='state', payload='online')])
 
     async def test_callback_exception_typeerror(self):
@@ -279,7 +279,7 @@ class DispatcherPublishTest(unittest.IsolatedAsyncioTestCase):
         self.broker_1.subscribe(wrong)
         self.broker_2.subscribe(self.callback_2.function)
         await self.broker.publish(topic='state', payload='online')
-        self.assertEqual(self.log.logged, [('exception', 'Callback error - c1 <- c event')])
+        self.assertEqual(self.log.logged, [('exception', 'Callback error - c1 <- c/state')])
         self.assertEqual(self.callback_2.called, [dict(sender='c', topic='state', payload='online')])
 
     async def test_callback_not_async(self):
@@ -288,7 +288,7 @@ class DispatcherPublishTest(unittest.IsolatedAsyncioTestCase):
         self.broker_1.subscribe(notasync)
         self.broker_2.subscribe(self.callback_2.function)
         await self.broker.publish(topic='state', payload='online')
-        self.assertEqual(self.log.logged, [('error', 'Callback not async - c1 <- c event')])
+        self.assertEqual(self.log.logged, [('error', 'Callback not async - c1 <- c/state')])
         self.assertEqual(self.callback_2.called, [dict(sender='c', topic='state', payload='online')])
 
 
