@@ -102,5 +102,5 @@ class LogLineCollector():
             self.event.clear()
 
     async def callback(self, level, component, message, *args, **kwargs):
-        self.line = dict(level=LEVEL_NAME[level], component=component, message=message)
+        self.line = dict(level=LEVEL_NAME[level].upper(), component=component, message=message)
         self.event.set()
