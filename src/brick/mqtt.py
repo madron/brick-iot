@@ -128,6 +128,7 @@ class Mqtt(MQTTClient):
         self.log.info('Started. Server: {}'.format(self.host))
         await self.connect()
         self.broker.subscribe(self.on_event_published)
+        asyncio.create_task(self.publish_state())
 
     async def stop(self, **kwargs):
         self.broker.unsubscribe()
@@ -141,6 +142,10 @@ class Mqtt(MQTTClient):
         topic = '{}/#'.format(self.set_prefix)
         await self.subscribe(topic, qos=1)
         self.log.info('Connected')
+
+    async def publish_state(self):
+        await asyncio.sleep(1)
+        await self.broker.publish(topic='publish_state')
 
     def _on_message(self, topic, payload, retained):
         asyncio.create_task(self.on_message(topic, payload, retained))

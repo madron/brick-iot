@@ -25,7 +25,7 @@ class DeviceManager:
             try:
                 instance = get_device_instance(device_name, device_config)
                 instance.log = self.log_collector.get_logger(device_name)
-                instance.broker = self.dispatcher.get_broker(device_name,callback=instance.message_callback)
+                instance.broker = self.dispatcher.get_broker(device_name,callback=instance._message_received)
                 self.devices[device_name] = instance
             except Exception as error:
                 self.log.exception('Device {} discarded'.format(device_name), error)

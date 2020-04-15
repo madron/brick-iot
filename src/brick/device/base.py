@@ -19,6 +19,8 @@ class Device:
         # State
         self._state = dict()
         self._subscriptions = dict()
+        # publish_state
+        self.subscribe(self.publish_state, None, 'publish_state')
         await self.setup()
 
     async def _teardown(self):
@@ -35,6 +37,10 @@ class Device:
             except Exception as error:
                 self.log.exception('loop error', error)
             await asyncio.sleep(10)
+
+    async def _message_received(self, sender=None, topic=None, payload=None):
+        self.log.debug('message_received from {} - {} {}'.format(sender, topic, payload))
+        await self.message_received(sender=sender, topic=topic, payload=payload)
 
     async def publish_state(self, **kwargs):
         self.log.debug('publish_state')
@@ -60,5 +66,5 @@ class Device:
         while True:
             await asyncio.sleep(10)
 
-    async def message_callback(self, sender=None, topic=None, payload=None):
+    async def message_received(self, sender=None, topic=None, payload=None):
         pass
