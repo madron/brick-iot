@@ -1,83 +1,92 @@
+import gc
 import uasyncio as asyncio
-import usocket as socket
 import mqtt_as
-from utime import ticks_ms, ticks_diff
 
 
-_DEFAULT_MS = const(20)
-
-
-class MQTTClient(mqtt_as.MQTT_base):
+class MQTT_base(mqtt_as.MQTT_base):
+    # remove _sta_if
     def __init__(self, config):
-        self._addr = None
-        self._handle_msg_task = None
-        self._keep_alive_task = None
+        # MQTT config
+        self._client_id = config['client_id']
+        self._user = config['user']
+        self._pswd = config['password']
+        self._keepalive = config['keepalive']
+        if self._keepalive >= 65536:
+            raise ValueError('invalid keepalive time')
+        self._response_time = config['response_time'] * 1000  # Repub if no PUBACK received (ms).
+        self._max_repubs = config['max_repubs']
+        self._clean_init = config['clean_init']  # clean_session state on first connection
+        self._clean = config['clean']  # clean_session state on reconnect
+        will = config['will']
+        if will is None:
+            self._lw_topic = False
+        else:
+            self._set_last_will(*will)
+        # WiFi config
+        self._ssid = config['ssid']  # Required for ESP32 / Pyboard D. Optional ESP8266
+        self._wifi_pw = config['wifi_pw']
+        self._ssl = config['ssl']
+        self._ssl_params = config['ssl_params']
+        # Callbacks and coros
+        self._cb = config['subs_cb']
+        self._wifi_handler = config['wifi_coro']
+        self._connect_handler = config['connect_coro']
+        # Network
+        self.port = config['port']
+        if self.port == 0:
+            self.port = 8883 if self._ssl else 1883
+        self.server = config['server']
+        if self.server is None:
+            raise ValueError('no server specified.')
+        self._sock = None
+        # self._sta_if = network.WLAN(network.STA_IF)
+        # self._sta_if.active(True)
+
+        self.newpid = pid_gen()
+        self.rcv_pids = set()  # PUBACK and SUBACK pids awaiting ACK response
+        self.last_rx = ticks_ms()  # Time of last communication from broker
+        self.lock = asyncio.Lock()
+
+
+async def noop(*args, **kwargs):
+    await asyncio.sleep(0)
+
+
+class MQTTClient(mqtt_as.MQTTClient):
+    def __init__(self, config):
         super().__init__(config)
-        keepalive = 1000 * self._keepalive  # ms
-        self._ping_interval = keepalive // 4 if keepalive else 20000
-        p_i = config['ping_interval'] * 1000  # Can specify shorter e.g. for subscribe-only
-        if p_i and p_i < self._ping_interval:
-            self._ping_interval = p_i
+        # Fake methods
+        self.wifi_connect = noop
+        self._wifi_handler = noop
+        self._connect_handler = noop
 
-    def isconnected(self):
-        return True
-
-    def _reconnect(self):
-        pass
-
-    async def connect(self):
-        if not self._addr:
-            self._addr = socket.getaddrinfo(self.server, self.port)[0][-1]
-        await self._connect(True)
-        self.rcv_pids.clear()
-        self._handle_msg_task = asyncio.create_task(self._handle_msg())
-        self._keep_alive_task = asyncio.create_task(self._keep_alive())
-
-    async def disconnect(self):
-        await self._handle_msg_task.cancel()
-        await self._keep_alive_task.cancel()
-        await super().disconnect()
-
-    async def subscribe(self, topic, qos=0):
-        mqtt_as.qos_check(qos)
-        while True:
-            try:
-                return await super().subscribe(topic, qos)
-            except OSError:
-                pass
-
-    async def publish(self, topic, msg, retain=False, qos=0):
-        mqtt_as.qos_check(qos)
-        while True:
-            try:
-                return await super().publish(topic, msg, retain, qos)
-            except OSError:
-                pass
-
-    async def _handle_msg(self):
-        while True:
-            try:
-                async with self.lock:
-                    await self.wait_msg()  # Immediate return if no message
-                await asyncio.sleep_ms(_DEFAULT_MS)  # Let other tasks get lock
-            except OSError as error:
-                self.log.exception('_handle_msg', error)
-
-
-    # Keep broker alive MQTT spec 3.1.2.10 Keep Alive.
-    # Runs until ping failure or no response in keepalive period.
-    async def _keep_alive(self):
-        while True:
-            pings_due = ticks_diff(ticks_ms(), self.last_rx) // self._ping_interval
-            if pings_due >= 4:
-                self.dprint('Reconnect: broker fail.')
-                break
-            elif pings_due >= 1:
+    # remove _sta_if
+    async def _keep_connected(self):
+        while self._has_connected:
+            if self.isconnected():  # Pause for 1 second
+                await asyncio.sleep(1)
+                gc.collect()
+            else:
+                # self._sta_if.disconnect()
+                await asyncio.sleep(1)
                 try:
-                    await self._ping()
+                    await self.wifi_connect()
                 except OSError:
+                    continue
+                if not self._has_connected:  # User has issued the terminal .disconnect()
+                    self.dprint('Disconnected, exiting _keep_connected')
                     break
-            await asyncio.sleep(1)
+                try:
+                    await self.connect()
+                    # Now has set ._isconnected and scheduled _connect_handler().
+                    self.dprint('Reconnect OK!')
+                except OSError as e:
+                    self.dprint('Error in reconnect.', e)
+                    # Can get ECONNABORTED or -1. The latter signifies no or bad CONNACK received.
+                    self.close()  # Disconnect and try again.
+                    self._in_connect = False
+                    self._isconnected = False
+        self.dprint('Disconnected, exited _keep_connected')
 
 
 class Mqtt(MQTTClient):
@@ -104,8 +113,12 @@ class Mqtt(MQTTClient):
         # Last will
         base_config['will'] = [self.last_will_topic, 'offline', True, 1]
         # handler
-        base_config['subs_cb'] = self.on_message
+        base_config['subs_cb'] = self._on_message
         super().__init__(base_config)
+
+    def dprint(self, *args):
+        msg = '--- mqtt_as: {}'.format(' '.join(args))
+        self.log.debug(msg)
 
     async def start(self, **kwargs):
         self.log.info('Started. Server: {}'.format(self.host))
@@ -120,16 +133,17 @@ class Mqtt(MQTTClient):
         await asyncio.sleep_ms(20)
         await self.publish(self.last_will_topic, 'online', True, 1)
         topic = '{}/#'.format(self.set_prefix)
-        print(topic)
         await self.subscribe(topic, qos=1)
         self.log.info('Connected')
 
-    def on_message(self, topic, payload, retained):
+    def _on_message(self, topic, payload, retained):
+        asyncio.create_task(self.on_message(topic, payload, retained))
+
+    async def on_message(self, topic, payload, retained):
         self.log.debug('message received: {} {}'.format(topic, payload))
         topic = topic.decode('utf-8').replace('{}/'.format(self.set_prefix), '', 1)
         payload = payload.decode('utf-8')
         # topic = topic.replace('{}/'.format(self.set_prefix), '', 1)
-
 
     # async def write(self, topic, payload):
     #     topic = '{}/{}'.format(self.get_prefix, topic)
