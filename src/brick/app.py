@@ -6,7 +6,7 @@ from brick.config import get_config
 from brick.device.manager import DeviceManager
 from brick.logging import LogCollector, StdoutLogConsumer
 from brick.message import Dispatcher
-from brick.mqtt import MQTTManager
+from brick.mqtt import Mqtt
 from brick.networking import NetworkManager
 from brick.ntp import NtpSync
 from brick.utils import get_iso_timestamp, get_traceback
@@ -46,6 +46,13 @@ class Application:
             self.log_collector.get_logger('ntp'),
             self.dispatcher.get_broker('ntp'),
             **ntp_config,
+        )
+        # Mqtt
+        self.mqtt = Mqtt(
+            self.log_collector.get_logger('mqtt'),
+            self.dispatcher.get_broker('mqtt'),
+            name=self.name,
+            config=self.mqtt_config,
         )
         # Web server
         self.webserver = web.Server(log_collector=self.log_collector)
@@ -88,20 +95,5 @@ class Application:
 
     async def normal_mode(self):
         await self.device.start()
-        self.mqtt = MQTTManager(name=self.name, config=self.mqtt_config, network=self.network,
-                                connect_callback=self.on_connect, message_callback=self.on_message)
-        # await self.mqtt.start()
         if self.config.get('config_mode', '') == 'normal':
             self.webserver_task = self.webserver.start()
-
-    async def write_timestamp(self):
-        while True:
-            await self.mqtt.write('timestamp', get_iso_timestamp())
-            await asyncio.sleep(5)
-
-    async def on_connect(self):
-        self.loop.create_task(self.write_timestamp())
-
-    async def on_message(self, topic, payload):
-        if topic == 'color':
-            await self.mqtt.write('color', payload)
