@@ -1,5 +1,6 @@
 import gc
 import uasyncio as asyncio
+import ure as re
 import mqtt_as
 
 
@@ -100,6 +101,7 @@ class Mqtt(MQTTClient):
         self.set_prefix = '{}/set'.format(self.prefix)
         self.last_will_topic = '{}/state'.format(self.get_prefix)
         self.host = config.get('host', 'localhost')
+        self.message_re = re.compile('^{}/(.+?)/(.+)$'.format(self.set_prefix))
         # Base config
         base_config = mqtt_as.config
         base_config['client_id'] = config.get('client_id', name)
@@ -115,6 +117,8 @@ class Mqtt(MQTTClient):
         # handler
         base_config['subs_cb'] = self._on_message
         super().__init__(base_config)
+        self.excluded_components = ['network']
+        self.available_components = [x for x in self.broker.dispatcher.callbacks.keys() if not x in self.excluded_components]
 
     def dprint(self, *args):
         msg = '--- mqtt_as: {}'.format(' '.join(args))
@@ -123,8 +127,10 @@ class Mqtt(MQTTClient):
     async def start(self, **kwargs):
         self.log.info('Started. Server: {}'.format(self.host))
         await self.connect()
+        self.broker.subscribe(self.on_event_published)
 
     async def stop(self, **kwargs):
+        self.broker.unsubscribe()
         await self.disconnect()
         self.log.info('Stopped')
 
@@ -141,10 +147,19 @@ class Mqtt(MQTTClient):
 
     async def on_message(self, topic, payload, retained):
         self.log.debug('message received: {} {}'.format(topic, payload))
-        topic = topic.decode('utf-8').replace('{}/'.format(self.set_prefix), '', 1)
-        payload = payload.decode('utf-8')
-        # topic = topic.replace('{}/'.format(self.set_prefix), '', 1)
+        try:
+            topic = topic.decode('utf-8')
+            match = self.message_re.match(topic)
+            if match:
+                recipient = match.group(1)
+                topic = match.group(2)
+                if recipient in self.available_components:
+                    self.broker.send(recipient, topic, payload.decode('utf-8'))
+        except Exception as error:
+            self.log.debug('on_message', error)
 
-    # async def write(self, topic, payload):
-    #     topic = '{}/{}'.format(self.get_prefix, topic)
-    #     await self.client.publish(topic, payload, True, 1)
+    async def on_event_published(self, sender, topic, payload=None):
+        if sender in self.available_components:
+            self.log.debug('event published: {}/{} {}'.format(sender, topic, payload))
+            topic = '{}/{}/{}'.format(self.get_prefix, sender, topic)
+            await self.publish(topic, str(payload), True, 1)
