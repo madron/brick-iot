@@ -28,6 +28,7 @@ def validate_device(config):
     errors = dict()
     for device_name, device_config in config.items():
         try:
+            device_config = device_config.copy()
             if not re_name.match(device_name):
                 raise ValidationError('Name must contains lowercase characters, numbers and _ only.')
             if 'type' not in device_config:

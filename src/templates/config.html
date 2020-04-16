@@ -1,4 +1,4 @@
-{% args error, config_text %}
+{% args errors, config_text %}
 <!DOCTYPE html>
 <html lang=en>
     <head>
@@ -7,8 +7,18 @@
     </head>
     <body>
         <h1>Brick Configuration</h1>
-            {% if error %}
-                <h2>Error: {{ error }}</h2>
+            {% if errors %}
+                <h2>Please correct the error below.</h2>
+                <ul>
+                    {% for name, errs in errors.items() %}
+                    <li><strong>{{ name }}</strong></li>
+                        <ul>
+                            {% for err in errs %}
+                            <li>{{ err }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endfor %}
+                </ul>
             {% endif %}
         <form action="." method="post" accept-charset="ISO-8859-1">
             <div>

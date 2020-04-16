@@ -1,5 +1,7 @@
 import json
 from brick import constants
+from brick.device import validate_device
+from brick.exceptions import ValidationError
 
 
 def get_config(config_dir=''):
@@ -27,6 +29,7 @@ def validate_config(config_text):
     # Skip commented lines
     lines = [l for l in lines if not l.lstrip(' ').startswith('//')]
     config = json.loads('\n'.join(lines))
+    validate_device(config.get('devices', dict()))
     return config
 
 

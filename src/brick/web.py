@@ -3,6 +3,7 @@ import ure as re
 import uasyncio as asyncio
 from picoweb import WebApp, start_response
 from brick import config
+from brick.exceptions import ValidationError
 from brick.logging import LEVEL_NAME
 from brick.utils import get_iso_timestamp
 
@@ -43,10 +44,10 @@ class Server(WebApp):
 
     def config(self, request, response):
         gc.collect()
-        success_url = '/'
+        success_url = '/config/'
         method = request.method
 
-        error = ''
+        errors = dict()
         if method == 'POST':
             await request.read_form_data()
             config_text = request.form['config']
@@ -55,13 +56,15 @@ class Server(WebApp):
                 config.save_config(config_text)
                 yield from self.redirect(response, success_url)
                 return
+            except ValidationError as error:
+                errors = error.message_dict
             except Exception as err:
-                error = str(err)
+                errors = dict(config=[str(err)])
         else:
             config_text = config.get_config_text()
 
         yield from start_response(response)
-        yield from self.render_template(response, 'config.html', (error, config_text))
+        yield from self.render_template(response, 'config.html', (errors, config_text))
         return
 
     def log_redirect(self, request, response):
