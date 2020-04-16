@@ -3,7 +3,7 @@ import utime
 import uasyncio as asyncio
 from brick import web
 from brick.config import get_config
-from brick.device.manager import DeviceManager
+from brick.device import DeviceManager
 from brick.logging import LogCollector, StdoutLogConsumer
 from brick.message import Dispatcher
 from brick.mqtt import Mqtt
