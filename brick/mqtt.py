@@ -57,6 +57,6 @@ class Mqtt:
 
     async def on_event_published(self, sender, topic, payload=None):
         if sender in self.available_components:
-            self.log.debug('event published: {}/{} {}'.format(sender, topic, payload))
+            self.log.debug('TO BE IMPLEMENTED event published: {}/{} {}'.format(sender, topic, payload))
             topic = '{}/{}/{}'.format(self.get_prefix, sender, topic)
-            await self.publish(topic, str(payload), True, 1)
+            # await self.publish(topic, str(payload), True, 1)

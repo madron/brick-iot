@@ -9,9 +9,9 @@ class Server:
         self.port = config.get('port', 80)
         self.task = None
 
-    def start(self, logger=None):
+    async def start(self, logger=None):
         self.task = asyncio.create_task(asyncio.sleep(0))
         self.log.info('TO BE IMPLENTED Server started on port {}'.format(self.port))
 
-    def stop(self, logger=None):
+    async def stop(self, logger=None):
         self.task.cancel()
