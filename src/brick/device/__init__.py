@@ -1,5 +1,5 @@
-import uasyncio as asyncio
-import ure as re
+import asyncio
+import re
 from brick.exceptions import ValidationError
 
 

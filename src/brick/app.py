@@ -1,6 +1,6 @@
 import sys
-import utime
-import uasyncio as asyncio
+import time
+import asyncio
 from brick import web
 from brick.config import get_config
 from brick.device import DeviceManager
@@ -9,7 +9,7 @@ from brick.message import Dispatcher
 from brick.mqtt import Mqtt
 from brick.networking import NetworkManager
 from brick.ntp import NtpSync
-from brick.utils import get_iso_timestamp, get_traceback
+from brick.utils import get_traceback
 
 
 class Application:
@@ -39,9 +39,13 @@ class Application:
             self.config.get('devices', dict()),
         )
         # Network
-        self.network = self.get_network_manager()
+        self.network = NetworkManager(
+            log=self.log_collector.get_logger('network'),
+            broker=self.dispatcher.get_broker('network'),
+            config=self.config.get('network', dict()),
+        )
         # Ntp
-        ntp_config = self.network.config.get('ntp', dict())
+        ntp_config = self.config.get('ntp', dict())
         self.ntp = NtpSync(
             self.log_collector.get_logger('ntp'),
             self.dispatcher.get_broker('ntp'),
@@ -58,28 +62,9 @@ class Application:
         self.webserver = web.Server(log_collector=self.log_collector)
         self.webserver_task = None
 
-    def get_network_manager(self):
-        if self.mode == 'config':
-            interface = self.config.get('config_interface', 'hostspot')
-        else:
-            interface = self.config.get('interface', 'wifi')
-        return NetworkManager(
-            log=self.log_collector.get_logger('network'),
-            broker=self.dispatcher.get_broker('network'),
-            interface=interface,
-            config=self.config.get('network', dict()),
-        )
-
     def start(self):
-        try:
-            self.loop.create_task(self.run())
-            self.loop.run_forever()
-        except Exception as error:
-            traceback = get_traceback(error)
-            sys.stdout.write(traceback)
-            with open("error.log", "a") as error_log:
-                error_log.write('{} '.format(get_iso_timestamp()))
-                error_log.write(traceback)
+        self.loop.create_task(self.run())
+        self.loop.run_forever()
 
     async def run(self):
         await self.network.start()

@@ -1,10 +1,8 @@
-import machine
-import uasyncio as asyncio
-import usocket as socket
-import ustruct as struct
-import utime
-from uasyncio.stream import Stream
-from brick.utils import get_iso_timestamp
+import asyncio
+import socket
+import struct
+import time
+from asyncio.streams import StreamReader
 
 
 class NtpClient:
@@ -20,7 +18,7 @@ class NtpClient:
         addr = socket.getaddrinfo(self.host, 123)[0][-1]
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.setblocking(False)
-        stream = Stream(s)
+        stream = StreamReader(s)
         try:
             s.sendto(NTP_QUERY, addr)
             msg = await stream.read(48)

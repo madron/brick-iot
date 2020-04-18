@@ -1,6 +1,6 @@
 from brick.device import Device, register_device
 import random
-import uasyncio as asyncio
+import asyncio
 
 
 @register_device()

@@ -1,4 +1,4 @@
-import utime
+import time
 from brick.app import Application
 
 
@@ -7,7 +7,7 @@ def main():
     while True:
         app.start()
         # Wait a little before restarting app
-        utime.sleep(5)
+        time.sleep(5)
         print('Restarting app')
 
 
