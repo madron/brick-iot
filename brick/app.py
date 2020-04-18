@@ -9,7 +9,6 @@ from brick.logging import LogCollector, StdoutLogConsumer
 from brick.message import Dispatcher
 from brick.mqtt import Mqtt
 from brick.ntp import NtpSync
-from brick.utils import get_traceback
 
 
 class Application:
@@ -75,6 +74,6 @@ class Application:
 
     async def run(self):
         await self.device.start()
-        await self.ntp.start()
+        # await self.ntp.start()
         await self.mqtt.start()
         await self.web.start()

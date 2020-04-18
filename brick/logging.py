@@ -1,8 +1,9 @@
-import sys
 import asyncio
+import io
+import sys
+import traceback
 from datetime import datetime
 from uuid import uuid4
-from brick.utils import get_traceback
 
 
 CRITICAL = 50
@@ -52,9 +53,10 @@ class Logger:
         self.log(CRITICAL, message, *args)
 
     def exception(self, message, error, *args, **kwargs):
-        traceback = get_traceback(error)
+        stream = io.StringIO()
+        traceback.print_exc(file=stream)
         self.log(ERROR, message, *args)
-        self.log(ERROR, traceback, *args)
+        self.log(ERROR, stream.getvalue(), *args)
 
     def exc(self, error, message, *args, **kwargs):
         self.exception(message, error, *args, **kwargs)

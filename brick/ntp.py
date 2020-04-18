@@ -38,16 +38,15 @@ class NtpClient:
 
 
 class NtpSync:
-    def __init__(self, log, broker, host='pool.ntp.org', timezone=0, delay=86400, fail_delay=10):
-        self.ntp_client = NtpClient(host=host, timezone_callback=self.timezone_callback)
-        self.host = host
+    def __init__(self, log, broker, config, timezone=0, delay=86400, fail_delay=10):
+        self.config = config
+        self.host = self.config.get('host', 'pool.ntp.org')
+        self.ntp_client = NtpClient(host=self.host, timezone_callback=self.timezone_callback)
         self.timezone = timezone
         self.delay = delay
         self.fail_delay = fail_delay
         self.log = log
         self.broker = broker
-        self.broker.subscribe(self.start, 'network', 'connect')
-        self.broker.subscribe(self.stop, 'network', 'disconnect')
         # Task
         self.task = None
         self.loop = asyncio.get_event_loop()
