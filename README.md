@@ -1,2 +1,2 @@
 # brick-iot
-micropython esp32 brick module
+python brick module
