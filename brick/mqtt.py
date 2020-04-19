@@ -1,6 +1,18 @@
 import asyncio
 import re
-from hbmqtt.client import MQTTClient
+from hbmqtt import client
+
+
+class MQTTClient(client.MQTTClient):
+    pass
+    def __init__(self, *args, on_connect=None, **kwargs):
+        self.on_connect = on_connect
+        super().__init__(*args, **kwargs)
+
+    async def _do_connect(self):
+        await super()._do_connect()
+        if self.on_connect:
+            await self.on_connect()
 
 
 class Mqtt:
@@ -25,6 +37,7 @@ class Mqtt:
         return MQTTClient(
             client_id=self.config.get('client_id', self.name),
             config=self.get_client_config(),
+            on_connect=self.on_connect,
         )
 
     def get_client_config(self):
@@ -33,7 +46,7 @@ class Mqtt:
             ping_delay=1,
             default_qos=2,
             default_retain=False,
-            auto_reconnect=False,
+            auto_reconnect=True,
             reconnect_max_interval=5,
             reconnect_retries=-1,
             will=dict(
@@ -66,13 +79,15 @@ class Mqtt:
 
     async def connect(self):
         await self.client.connect(**self.connect_parameters)
+        asyncio.create_task(self.read_messages())
+        self.broker.subscribe(self.on_event_published)
+        asyncio.create_task(self.publish_state())
+
+    async def on_connect(self):
         await self.client.publish(self.last_will_topic, b'online')
         topic = '{}/#'.format(self.set_prefix)
         await self.client.subscribe([(topic, 2)])
         self.log.info('Connected')
-        asyncio.create_task(self.read_messages())
-        self.broker.subscribe(self.on_event_published)
-        asyncio.create_task(self.publish_state())
 
     async def publish_state(self):
         await asyncio.sleep(1)
