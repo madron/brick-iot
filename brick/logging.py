@@ -77,6 +77,7 @@ class LogCollector:
         return Logger(self, component)
 
     def add_consumer(self, callback, level='info', components=dict()):
+        components = components or dict()
         consumer_id = uuid4()
         self.consumers[consumer_id] = dict(
             callback=callback,

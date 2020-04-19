@@ -4,6 +4,7 @@ from brick.exceptions import ValidationError
 
 
 def import_device_modules():
+    from brick.device import base
     from brick.device import test
 
 
@@ -117,9 +118,12 @@ class Device:
             self.broker.publish(topic=topic, payload=payload)
 
     def set_state(self, topic, payload):
-        self.log.debug('{} {}'.format(topic, payload))
+        self.log.debug('set_state {} {}'.format(topic, payload))
         self._state[topic] = payload
         self.broker.publish(topic=topic, payload=payload)
+
+    def get_state(self, topic):
+        return self._state[topic]
 
     def subscribe(self, callback, sender=None, topic=None):
         self.broker.subscribe(callback, sender=sender, topic=topic)
