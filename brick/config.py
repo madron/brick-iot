@@ -20,7 +20,7 @@ def get_config(config_dir=''):
 
 
 def validate_config(config_text):
-    config = yaml.load(config_text)
+    config = yaml.safe_load(config_text)
     validate_device(config.get('devices', dict()))
     return config
 
