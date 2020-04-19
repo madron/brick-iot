@@ -1,18 +1,12 @@
-import json
+import os
+import yaml
 from brick import constants
 from brick.device import validate_device
 from brick.exceptions import ValidationError
 
 
 def get_config(config_dir=''):
-    config_text = get_config_text(config_dir=config_dir)
-    return validate_config(config_text)
-
-
-def get_config_text(config_dir=''):
-    file_name = 'config.json'
-    if config_dir:
-        file_name = '{}/config.json'.format(config_dir)
+    file_name = os.path.join(config_dir, 'config.yml')
     try:
         with open(file_name, 'r') as f:
             text = f.read()
@@ -21,14 +15,12 @@ def get_config_text(config_dir=''):
             f.write(constants.DEFAULT_CONFIG)
         with open(file_name, 'r') as f:
             text = f.read()
-    return text
+
+    return validate_config(text)
 
 
 def validate_config(config_text):
-    lines = config_text.splitlines()
-    # Skip commented lines
-    lines = [l for l in lines if not l.lstrip(' ').startswith('//')]
-    config = json.loads('\n'.join(lines))
+    config = yaml.load(config_text)
     validate_device(config.get('devices', dict()))
     return config
 
