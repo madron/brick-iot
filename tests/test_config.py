@@ -1,7 +1,7 @@
 import os
 import unittest
 from tempfile import TemporaryDirectory
-from brick.config import get_config
+from brick.config import ConfigManager
 
 
 class GetConfigTest(unittest.TestCase):
@@ -18,13 +18,13 @@ class GetConfigTest(unittest.TestCase):
             config_file = os.path.join(config_dir, 'config.yml')
             with open(config_file, 'w') as f:
                 f.write(config)
-            config = get_config(config_dir=config_dir)
+            config = ConfigManager(config_dir=config_dir).get()
 
         self.assertEqual(config['name'], 'mybrick')
 
     def test_default(self):
         with TemporaryDirectory() as config_dir:
             config_file = os.path.join(config_dir, 'config.yml')
-            config = get_config(config_dir=config_dir)
+            config = ConfigManager(config_dir=config_dir).get()
 
         self.assertEqual(config['name'], 'brick')

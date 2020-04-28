@@ -3,7 +3,7 @@ import time
 import asyncio
 from brick import web
 from brick.component import FakeComponent
-from brick.config import get_config
+from brick.config import ConfigManager
 from brick.device import DeviceManager
 from brick.logging import LogCollector, StdoutLogConsumer
 from brick.message import Dispatcher
@@ -12,9 +12,10 @@ from brick.ntp import NtpSync
 
 
 class Application:
-    def __init__(self):
+    def __init__(self, config_dir=None, persist_command=None):
         # Config
-        self.config = get_config()
+        self.config_manager = ConfigManager(config_dir=config_dir, persist_command=persist_command)
+        self.config = self.config_manager.get()
         self.name = self.config.get('name', 'brick')
         self.mode = self.config.get('mode', 'normal')
         self.mqtt_config = self.config.get('mqtt', dict())
@@ -27,6 +28,8 @@ class Application:
             components=log_config.get('components', dict()),
         )
         self.log = self.log_collector.get_logger('app')
+        # ConfigManager log
+        self.config_manager.set_log(self.log_collector.get_logger('config'))
         # Dispatcher
         self.dispatcher = Dispatcher(self.log_collector.get_logger('dispatcher'))
         # Device
