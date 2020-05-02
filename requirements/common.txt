@@ -1,3 +1,4 @@
 PyYAML==5.3.1
 hbmqtt==0.9.6
 gpiozero
+smbus2-asyncio
