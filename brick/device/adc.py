@@ -13,6 +13,7 @@ class Ads1115(Device):
         channel=0,
         delay=10,
         conversion_factor=1,
+        decimals=6,
         config_mode=False,
         address=0x48,
         i2c_bus=0,
@@ -21,6 +22,7 @@ class Ads1115(Device):
         self.channel = channel
         self.delay = int(delay)
         self.conversion_factor = float(conversion_factor)
+        self.decimals = int(decimals)
         self.config_mode = bool(config_mode)
         self.voltage_conversion_factor = 4.096 / 32768
         self.bus = i2c_manager.get_bus(i2c_bus)
@@ -28,13 +30,16 @@ class Ads1115(Device):
 
     async def setup(self):
         self.set_state('delay', self.delay)
+        self.set_state('decimals', self.decimals)
         self.set_state('conversion_factor', self.conversion_factor)
         await self.bus.open()
 
     async def loop(self):
         while True:
             value = await self.adc.read_adc(self.channel)
-            value = round(value * self.voltage_conversion_factor * self.conversion_factor, 6)
+            value = round(value * self.voltage_conversion_factor * self.conversion_factor, self.decimals)
+            if self.decimals < 1:
+                value = int(value)
             self.set_state('value', value)
             await asyncio.sleep(self.delay)
 
@@ -46,3 +51,6 @@ class Ads1115(Device):
             if topic == 'conversion_factor':
                 self.conversion_factor = float(payload)
                 self.set_state('conversion_factor', self.conversion_factor)
+            if topic == 'decimals':
+                self.decimals = int(payload)
+                self.set_state('decimals', self.decimals)
