@@ -6,6 +6,7 @@ from brick.exceptions import ValidationError
 def import_device_modules():
     from brick.device import base
     from brick.device import i2c
+    from brick.device import adc
     from brick.device import test
 
 
