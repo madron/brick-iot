@@ -5,7 +5,7 @@ __pycache__/
 
 
 # Local development files
-/config
+/config/*
 
 
 # Unit test / coverage reports
