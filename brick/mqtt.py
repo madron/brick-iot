@@ -22,12 +22,10 @@ class Mqtt:
         self.name = name
         self.config = config
         self.prefix = '{}/{}'.format(config.get('prefix', 'brick'), name)
-        self.get_prefix = '{}/get'.format(self.prefix)
-        self.set_prefix = '{}/set'.format(self.prefix)
-        self.last_will_topic = '{}/state'.format(self.get_prefix)
+        self.last_will_topic = '{}/brick/get/state'.format(self.prefix)
         self.host = config.get('host', 'localhost')
         self.port = config.get('port', 1883)
-        self.message_re = re.compile('^{}/(.+?)/(.+)$'.format(self.set_prefix))
+        self.message_re = re.compile('^{}/(\w+)/set/(.+)$'.format(self.prefix))
         self.excluded_components = ['network']
         self.available_components = [x for x in self.broker.dispatcher.callbacks.keys() if not x in self.excluded_components]
         self.client = self.get_client()
@@ -85,7 +83,7 @@ class Mqtt:
 
     async def on_connect(self):
         await self.client.publish(self.last_will_topic, b'online')
-        topic = '{}/#'.format(self.set_prefix)
+        topic = '{}/+/set/#'.format(self.prefix)
         await self.client.subscribe([(topic, 2)])
         self.log.info('Connected')
 
@@ -122,5 +120,5 @@ class Mqtt:
     async def on_event_published(self, sender, topic, payload=None):
         if sender in self.available_components:
             self.log.debug('event published: {}/{} {}'.format(sender, topic, payload))
-            topic = '{}/{}/{}'.format(self.get_prefix, sender, topic)
+            topic = '{}/{}/get/{}'.format(self.prefix, sender, topic)
             await self.client.publish(topic, str(payload).encode(), True, 1)
