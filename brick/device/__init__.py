@@ -204,31 +204,41 @@ class NumericSensor(Sensor):
         super().__init__(**kwargs)
         self.scale = float(scale)
         self.precision = self.clean_precision(precision)
-        self.change_margin= decimal.Decimal(change_margin)
+        self.change_margin= self.clean_change_margin(change_margin)
         self.unit_of_measurement = unit_of_measurement
 
     async def setup(self):
         await super().setup()
         self.set_state('scale', self.scale)
         self.set_precision(self.precision)
+        self.set_change_margin(self.change_margin)
         self.set_state('change_margin', self.change_margin)
         self.set_state('unit_of_measurement', self.unit_of_measurement)
 
     def set_precision(self, precision):
         self.precision = self.clean_precision(precision)
         self.set_state('precision', self.precision)
-        if self.precision > 0:
-            self.precision_quantize = decimal.Decimal('0.{}'.format('0' * self.precision))
-        else:
-            self.precision_quantize = decimal.Decimal('0')
 
     def clean_precision(self, precision):
         precision = int(precision)
         assert precision <= 6
+        if precision > 0:
+            self.precision_quantize = decimal.Decimal('0.{}'.format('0' * precision))
+        else:
+            self.precision_quantize = decimal.Decimal('0')
         return precision
+
+    def set_change_margin(self, value):
+        self.change_margin = self.clean_change_margin(value)
+        self.set_state('change_margin', self.change_margin)
+
+    def clean_change_margin(self, value):
+        return decimal.Decimal(value).quantize(self.precision_quantize)
 
     def clean_value(self, value):
         value = round(value * self.scale, self.precision)
+        if value == 0:
+            value = abs(value)
         return decimal.Decimal(value).quantize(self.precision_quantize)
 
     def is_changed(self, value, previous_value):
@@ -247,5 +257,4 @@ class NumericSensor(Sensor):
             if topic == 'precision':
                 self.set_precision(payload)
             if topic == 'change_margin':
-                self.change_margin= decimal.Decimal(payload)
-                self.set_state('change_margin', self.change_margin)
+                self.set_change_margin(payload)
