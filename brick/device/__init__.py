@@ -1,5 +1,6 @@
 import asyncio
 import re
+import time
 from brick.exceptions import ValidationError
 
 
@@ -144,3 +145,48 @@ class Device:
 
     async def message_received(self, sender=None, topic=None, payload=None):
         pass
+
+
+class Sensor(Device):
+    def __init__(self, delay=10, max_delay=0, config_mode=False):
+        self.delay = int(delay)
+        self.max_delay = int(max_delay)
+        self.config_mode = bool(config_mode)
+        self.sensor_previous_value = None
+        self.sensor_set_state_time = 0
+
+    async def setup(self):
+        self.set_state('delay', self.delay)
+        self.set_state('max_delay', self.max_delay)
+
+    async def loop(self):
+        while True:
+            await self.set_value()
+            await asyncio.sleep(self.delay)
+
+    async def message_received(self, sender=None, topic=None, payload=None):
+        if self.config_mode:
+            if topic == 'delay':
+                self.delay = int(payload)
+                self.set_state('delay', self.delay)
+            if topic == 'max_delay':
+                self.max_delay = int(payload)
+                self.set_state('max_delay', self.max_delay)
+
+    async def set_value(self):
+        value = await self.get_value()
+        if self.is_changed(value, self.sensor_previous_value):
+            self.sensor_set_state_time = time.time_ns()
+            self.set_state('value', value)
+        else:
+            now = time.time_ns()
+            if (now - self.sensor_set_state_time) // 1000000000 >= self.max_delay:
+                self.sensor_set_state_time = time.time_ns()
+                self.set_state('value', value)
+        self.sensor_previous_value = value
+
+    async def get_value(self):
+        raise NotImplementedError()
+
+    def is_changed(self, value, previous_value):
+        return not(value == previous_value)
