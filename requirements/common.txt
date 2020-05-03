@@ -1,4 +1,7 @@
 PyYAML==5.3.1
 hbmqtt==0.9.6
-gpiozero
-smbus2-asyncio
+gpiozero==1.5.1
+smbus2==0.3.0  # Needed by smbus2-asyncio
+smbus2-asyncio==0.0.5
+click==7.1.2   # Needed by w1thermsensor
+w1thermsensor==1.3.0
