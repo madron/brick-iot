@@ -1,6 +1,6 @@
 import asyncio
 import json
-from brick.device import Device, register_device
+from brick.device import Device, NumericSensor, register_device
 from brick.hardware.onewire.w1thermsensor import W1ThermSensor
 
 
@@ -16,15 +16,14 @@ class OneWireDetect(Device):
 
 
 @register_device()
-class DS18x20(Device):
-    def __init__(self, delay=10):
-        self.delay = int(delay)
+class DS18x20(NumericSensor):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     async def setup(self):
+        await super().setup()
         self.sensor = W1ThermSensor()
         await self.sensor.setup()
 
-    async def loop(self):
-        while True:
-            self.set_state('temperature', await self.sensor.get_temperature())
-            await asyncio.sleep(self.delay)
+    async def get_value(self):
+        return await self.sensor.get_temperature()
