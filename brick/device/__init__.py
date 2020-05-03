@@ -1,4 +1,6 @@
 import asyncio
+import decimal
+import json
 import re
 import time
 from brick.exceptions import ValidationError
@@ -158,6 +160,7 @@ class Sensor(Device):
     async def setup(self):
         self.set_state('delay', self.delay)
         self.set_state('max_delay', self.max_delay)
+        self.set_state('config_mode', json.dumps(self.config_mode))
 
     async def loop(self):
         while True:
@@ -175,6 +178,7 @@ class Sensor(Device):
 
     async def set_value(self):
         value = await self.get_value()
+        value = self.clean_value(value)
         if self.is_changed(value, self.sensor_previous_value):
             self.sensor_set_state_time = time.time_ns()
             self.set_state('value', value)
@@ -188,5 +192,58 @@ class Sensor(Device):
     async def get_value(self):
         raise NotImplementedError()
 
+    def clean_value(self, value):
+        return value
+
     def is_changed(self, value, previous_value):
         return not(value == previous_value)
+
+
+class NumericSensor(Sensor):
+    def __init__(self, scale=1, precision=0, change_margin=0, unit_of_measurement='', **kwargs):
+        super().__init__(**kwargs)
+        self.scale = float(scale)
+        self.precision = self.clean_precision(precision)
+        self.change_margin= decimal.Decimal(change_margin)
+        self.unit_of_measurement = unit_of_measurement
+
+    async def setup(self):
+        await super().setup()
+        self.set_state('scale', self.scale)
+        self.set_precision(self.precision)
+        self.set_state('change_margin', self.change_margin)
+        self.set_state('unit_of_measurement', self.unit_of_measurement)
+
+    def set_precision(self, precision):
+        self.precision = self.clean_precision(precision)
+        self.set_state('precision', self.precision)
+        if self.precision > 0:
+            self.precision_quantize = decimal.Decimal('0.{}'.format('0' * self.precision))
+        else:
+            self.precision_quantize = decimal.Decimal('0')
+
+    def clean_precision(self, precision):
+        precision = int(precision)
+        assert precision <= 6
+        return precision
+
+    def clean_value(self, value):
+        value = round(value * self.scale, self.precision)
+        return decimal.Decimal(value).quantize(self.precision_quantize)
+
+    def is_changed(self, value, previous_value):
+        if previous_value is None:
+            return True
+        return bool(abs(value - previous_value) >= self.change_margin)
+        # return not(value == previous_value)
+
+    async def message_received(self, sender=None, topic=None, payload=None):
+        await super().message_received(sender=sender, topic=topic, payload=payload)
+        if self.config_mode:
+            if topic == 'scale':
+                self.scale = float(payload)
+                self.set_state('scale', self.scale)
+            if topic == 'precision':
+                self.set_precision(payload)
+            if topic == 'change_margin':
+                self.change_margin= decimal.Decimal(payload)
