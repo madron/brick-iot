@@ -168,7 +168,7 @@ class Sensor(Device):
             await asyncio.sleep(self.delay)
 
     async def message_received(self, sender=None, topic=None, payload=None):
-        if self.config_mode:
+        if self.config_mode and bool(payload):
             if topic == 'delay':
                 self.delay = int(payload)
                 self.set_state('delay', self.delay)
@@ -240,7 +240,7 @@ class NumericSensor(Sensor):
 
     async def message_received(self, sender=None, topic=None, payload=None):
         await super().message_received(sender=sender, topic=topic, payload=payload)
-        if self.config_mode:
+        if self.config_mode and bool(payload):
             if topic == 'scale':
                 self.scale = float(payload)
                 self.set_state('scale', self.scale)
