@@ -234,8 +234,9 @@ class NumericSensor(Sensor):
     def is_changed(self, value, previous_value):
         if previous_value is None:
             return True
+        if self.change_margin == 0:
+            return not(value == previous_value)
         return bool(abs(value - previous_value) >= self.change_margin)
-        # return not(value == previous_value)
 
     async def message_received(self, sender=None, topic=None, payload=None):
         await super().message_received(sender=sender, topic=topic, payload=payload)
@@ -247,3 +248,4 @@ class NumericSensor(Sensor):
                 self.set_precision(payload)
             if topic == 'change_margin':
                 self.change_margin= decimal.Decimal(payload)
+                self.set_state('change_margin', self.change_margin)
