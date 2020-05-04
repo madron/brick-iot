@@ -82,6 +82,8 @@ class DecimalValidatorTest(unittest.TestCase):
         self.assertEqual(validator('-1.2'), Decimal('-1.2'))
         self.assertEqual(validator(Decimal('0')), Decimal('0'))
         self.assertEqual(validator(Decimal('-0')), Decimal('0'))
+        self.assertEqual(validator(Decimal('-0.0000001')), Decimal('0'))
+        self.assertEqual(validator(Decimal('-0.000001')), Decimal('-0.000001'))
         self.assertEqual(validator(Decimal('0.1')), Decimal('0.1'))
         self.assertEqual(validator(Decimal('-1.2')), Decimal('-1.2'))
         with self.assertRaises(ValidationError) as ctx:
@@ -93,6 +95,15 @@ class DecimalValidatorTest(unittest.TestCase):
         self.assertEqual(validator(1.2), Decimal('1.2'))
         self.assertEqual(validator(1.23), Decimal('1.23'))
         self.assertEqual(validator(1.234), Decimal('1.23'))
+        validator = validators.DecimalValidator(name='delay', precision=0)
+        self.assertEqual(validator(54321.2), Decimal('54321'))
+        self.assertEqual(validator(54321.23), Decimal('54321'))
+        self.assertEqual(validator(54321.234), Decimal('54321'))
+        validator = validators.DecimalValidator(name='delay', precision=-2)
+        self.assertEqual(validator(1550), Decimal('1600'))
+        self.assertEqual(validator(54321.2), Decimal('54300'))
+        self.assertEqual(validator(54321.23), Decimal('54300'))
+        self.assertEqual(validator(54321.234), Decimal('54300'))
 
     def test_min_value(self):
         validator = validators.DecimalValidator(name='delay', min_value=2)
