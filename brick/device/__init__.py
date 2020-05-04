@@ -117,7 +117,10 @@ class Device:
 
     async def _message_received(self, sender=None, topic=None, payload=None):
         self.log.debug('message_received from {} - {} {}'.format(sender, topic, payload))
-        await self.message_received(sender=sender, topic=topic, payload=payload)
+        try:
+            await self.message_received(sender=sender, topic=topic, payload=payload)
+        except ValidationError as error:
+            self.log.warning("message from {} discarded.  {}: '{}' ({})".format(sender, topic, payload, error.message))
 
     async def publish_state(self, **kwargs):
         self.log.debug('publish_state')
