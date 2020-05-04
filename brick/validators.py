@@ -18,11 +18,23 @@ class BooleanValidator:
         return value
 
 
+def get_precision_quantize(precision):
+        if precision > 0:
+            return Decimal('0.{}'.format('0' * precision))
+        else:
+            return Decimal('0')
+
+
 class IntegerValidator:
     def __init__(self, name='value', min_value=None, max_value=None):
         self.name = name
+        precision_quantize = get_precision_quantize(6)
         self.min_value = min_value
+        if self.min_value:
+            self.min_value = Decimal(min_value).quantize(precision_quantize)
         self.max_value = max_value
+        if self.max_value:
+            self.max_value = Decimal(max_value).quantize(precision_quantize)
 
     def __call__(self, value):
         if not isinstance(value, int):
@@ -52,10 +64,7 @@ class DecimalValidator(IntegerValidator):
     def __init__(self, name='value', precision=6, min_value=None, max_value=None):
         super().__init__(name=name, min_value=min_value, max_value=max_value)
         self.precision = precision
-        if precision > 0:
-            self.precision_quantize = Decimal('0.{}'.format('0' * precision))
-        else:
-            self.precision_quantize = Decimal('0')
+        self.precision_quantize = get_precision_quantize(precision)
 
     def __call__(self, value):
         if isinstance(value, Decimal):

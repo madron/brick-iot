@@ -47,14 +47,14 @@ class IntegerValidatorTest(unittest.TestCase):
         self.assertEqual(validator(2), 2)
         with self.assertRaises(ValidationError) as ctx:
             validator(1)
-        self.assertEqual(ctx.exception.message, 'Ensure max_delay is greater than or equal to 2')
+        self.assertEqual(ctx.exception.message, 'Ensure max_delay is greater than or equal to 2.000000')
 
     def test_max_value(self):
         validator = validators.IntegerValidator(name='max_delay', max_value=2)
         self.assertEqual(validator(2), Decimal('2'))
         with self.assertRaises(ValidationError) as ctx:
             validator(3)
-        self.assertEqual(ctx.exception.message, 'Ensure max_delay is less than or equal to 2')
+        self.assertEqual(ctx.exception.message, 'Ensure max_delay is less than or equal to 2.000000')
 
 
 class DecimalValidatorTest(unittest.TestCase):
@@ -85,11 +85,16 @@ class DecimalValidatorTest(unittest.TestCase):
         self.assertEqual(validator(2), Decimal('2'))
         with self.assertRaises(ValidationError) as ctx:
             validator(1.99)
-        self.assertEqual(ctx.exception.message, 'Ensure delay is greater than or equal to 2')
+        self.assertEqual(ctx.exception.message, 'Ensure delay is greater than or equal to 2.000000')
+        validator = validators.DecimalValidator(name='delay', min_value=0.2)
+        self.assertEqual(validator(0.2), Decimal('0.2'))
+        with self.assertRaises(ValidationError) as ctx:
+            validator(0.199)
+        self.assertEqual(ctx.exception.message, 'Ensure delay is greater than or equal to 0.200000')
 
     def test_max_value(self):
         validator = validators.DecimalValidator(name='delay', max_value=2)
         self.assertEqual(validator(2), Decimal('2'))
         with self.assertRaises(ValidationError) as ctx:
             validator(2.01)
-        self.assertEqual(ctx.exception.message, 'Ensure delay is less than or equal to 2')
+        self.assertEqual(ctx.exception.message, 'Ensure delay is less than or equal to 2.000000')
