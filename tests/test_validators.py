@@ -4,6 +4,33 @@ from brick import validators
 from brick.exceptions import ValidationError
 
 
+class BooleanValidatorTest(unittest.TestCase):
+    def test_simple(self):
+        validator = validators.BooleanValidator(name='config_mode')
+        self.assertEqual(validator(True), True)
+        self.assertEqual(validator('True'), True)
+        self.assertEqual(validator('true'), True)
+        self.assertEqual(validator('Yes'), True)
+        self.assertEqual(validator('yes'), True)
+        self.assertEqual(validator(False), False)
+        self.assertEqual(validator('False'), False)
+        self.assertEqual(validator('false'), False)
+        self.assertEqual(validator('No'), False)
+        self.assertEqual(validator('no'), False)
+        with self.assertRaises(ValidationError) as ctx:
+            validator(1)
+        self.assertEqual(ctx.exception.message, 'Ensure config_mode is true or false.')
+        with self.assertRaises(ValidationError) as ctx:
+            validator(1.0)
+        self.assertEqual(ctx.exception.message, 'Ensure config_mode is true or false.')
+        with self.assertRaises(ValidationError) as ctx:
+            validator(None)
+        self.assertEqual(ctx.exception.message, 'Ensure config_mode is true or false.')
+        with self.assertRaises(ValidationError) as ctx:
+            validator('Maybe')
+        self.assertEqual(ctx.exception.message, 'Ensure config_mode is true or false.')
+
+
 class IntegerValidatorTest(unittest.TestCase):
     def test_simple(self):
         validator = validators.IntegerValidator(name='max_delay')

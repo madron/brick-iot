@@ -2,6 +2,22 @@ from decimal import Decimal
 from brick.exceptions import ValidationError
 
 
+class BooleanValidator:
+    def __init__(self, name='value'):
+        self.name = name
+
+    def __call__(self, value):
+        if not isinstance(value, bool):
+            value = str(value).lower()
+            if value in ['true', 'yes']:
+                return True
+            elif value in ['false', 'no']:
+                return False
+            msg = 'Ensure {} is true or false.'.format(self.name)
+            raise ValidationError(msg)
+        return value
+
+
 class IntegerValidator:
     def __init__(self, name='value', min_value=None, max_value=None):
         self.name = name
