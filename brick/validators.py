@@ -75,9 +75,9 @@ class DecimalValidator(IntegerValidator):
             except ValueError:
                 msg = 'Ensure {} is a number.'.format(self.name)
                 raise ValidationError(msg)
-            if value == 0:
-                value = abs(value)
             value =  Decimal(value).quantize(self.precision_quantize)
         self.check_min_value(value)
         self.check_max_value(value)
+        if value == 0:
+            value = abs(value)
         return value
