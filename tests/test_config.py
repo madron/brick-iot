@@ -3,6 +3,8 @@ import unittest
 from tempfile import TemporaryDirectory
 from brick.config import ConfigManager
 
+os.environ['W1THERMSENSOR_NO_KERNEL_MODULE'] = '1'
+
 
 class GetConfigTest(unittest.TestCase):
     def test_comment(self):
