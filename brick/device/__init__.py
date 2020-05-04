@@ -1,8 +1,9 @@
 import asyncio
-import decimal
 import json
 import re
 import time
+from decimal import Decimal
+from brick import validators
 from brick.exceptions import ValidationError
 
 
@@ -150,10 +151,14 @@ class Device:
 
 
 class Sensor(Device):
+    delay_validator = validators.DecimalValidator(name='delay', min_value=0.2)
+    max_delay_validator = validators.DecimalValidator(name='max_delay')
+    config_mode_validator = validators.BooleanValidator(name='config_mode')
+
     def __init__(self, delay=10, max_delay=0, config_mode=False):
-        self.delay = int(delay)
-        self.max_delay = int(max_delay)
-        self.config_mode = bool(config_mode)
+        self.delay = self.delay_validator(delay)
+        self.max_delay = self.max_delay_validator(max_delay)
+        self.config_mode = self.config_mode_validator(config_mode)
         self.sensor_previous_value = None
         self.sensor_set_state_time = 0
 
@@ -165,15 +170,15 @@ class Sensor(Device):
     async def loop(self):
         while True:
             await self.set_value()
-            await asyncio.sleep(self.delay)
+            await asyncio.sleep(float(self.delay))
 
     async def message_received(self, sender=None, topic=None, payload=None):
         if self.config_mode and bool(payload):
             if topic == 'delay':
-                self.delay = int(payload)
+                self.delay = self.delay_validator(payload)
                 self.set_state('delay', self.delay)
             if topic == 'max_delay':
-                self.max_delay = int(payload)
+                self.max_delay = self.max_delay_validator(payload)
                 self.set_state('max_delay', self.max_delay)
 
     async def set_value(self):
@@ -200,46 +205,27 @@ class Sensor(Device):
 
 
 class NumericSensor(Sensor):
+    scale_validator = validators.DecimalValidator(name='scale')
+    precision_validator = validators.IntegerValidator(name='precision')
+
     def __init__(self, scale=1, precision=0, change_margin=0, unit_of_measurement='', **kwargs):
         super().__init__(**kwargs)
-        self.scale = float(scale)
-        self.precision = self.clean_precision(precision)
-        self.change_margin= self.clean_change_margin(change_margin)
+        self.scale = self.scale_validator(scale)
+        self.precision = self.precision_validator(precision)
+        self.change_margin_validator = validators.DecimalValidator(name='change_margin', precision=self.precision)
+        self.change_margin= self.change_margin_validator(change_margin)
         self.unit_of_measurement = unit_of_measurement
+        self.value_validator = validators.DecimalValidator(name='value', precision=self.precision)
 
     async def setup(self):
         await super().setup()
         self.set_state('scale', self.scale)
-        self.set_precision(self.precision)
-        self.set_change_margin(self.change_margin)
+        self.set_state('precision', self.precision)
         self.set_state('change_margin', self.change_margin)
         self.set_state('unit_of_measurement', self.unit_of_measurement)
 
-    def set_precision(self, precision):
-        self.precision = self.clean_precision(precision)
-        self.set_state('precision', self.precision)
-
-    def clean_precision(self, precision):
-        precision = int(precision)
-        assert precision <= 6
-        if precision > 0:
-            self.precision_quantize = decimal.Decimal('0.{}'.format('0' * precision))
-        else:
-            self.precision_quantize = decimal.Decimal('0')
-        return precision
-
-    def set_change_margin(self, value):
-        self.change_margin = self.clean_change_margin(value)
-        self.set_state('change_margin', self.change_margin)
-
-    def clean_change_margin(self, value):
-        return decimal.Decimal(value).quantize(self.precision_quantize)
-
     def clean_value(self, value):
-        value = round(value * self.scale, self.precision)
-        if value == 0:
-            value = abs(value)
-        return decimal.Decimal(value).quantize(self.precision_quantize)
+        return self.value_validator(Decimal(value) * self.scale)
 
     def is_changed(self, value, previous_value):
         if previous_value is None:
@@ -252,9 +238,11 @@ class NumericSensor(Sensor):
         await super().message_received(sender=sender, topic=topic, payload=payload)
         if self.config_mode and bool(payload):
             if topic == 'scale':
-                self.scale = float(payload)
+                self.scale = self.scale_validator(payload)
                 self.set_state('scale', self.scale)
             if topic == 'precision':
-                self.set_precision(payload)
+                self.precision = self.precision_validator(payload)
+                self.set_state('precision', self.precision)
             if topic == 'change_margin':
-                self.set_change_margin(payload)
+                self.change_margin = self.change_margin_validator(payload)
+                self.set_state('change_margin', self.change_margin)
