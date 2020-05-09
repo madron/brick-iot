@@ -1,5 +1,5 @@
 from brick.device import NumericSensor, register_device
-from brick.device.i2c import i2c_manager
+from brick.hardware.i2c import i2c_manager
 from brick.hardware.ti import ads1x15
 
 

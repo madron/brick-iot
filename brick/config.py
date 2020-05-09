@@ -5,6 +5,9 @@ import yaml
 from brick import constants
 from brick.device import validate_device
 from brick.exceptions import ValidationError
+from brick.hardware import HardwareManager, validate_hardware
+from brick.logging import LogCollector
+from brick.message import Dispatcher
 
 
 class ConfigManager:
@@ -30,7 +33,14 @@ class ConfigManager:
 
     def validate(self, config_text):
         config = yaml.safe_load(config_text)
-        validate_device(config.get('devices', dict()))
+        # Hardware
+        hardware_config = config.get('hardware', dict())
+        validate_hardware(hardware_config)
+        # Device
+        log_collector = LogCollector()
+        dispatcher = Dispatcher(log_collector.get_logger('config'))
+        hardware_manager = HardwareManager(log_collector, dispatcher, hardware_config)
+        validate_device(config.get('devices', dict()), hardware_manager)
         return config
 
     def save(self, config_text):

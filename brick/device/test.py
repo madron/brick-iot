@@ -5,7 +5,8 @@ import asyncio
 
 @register_device()
 class Random(Device):
-    def __init__(self, delay=10, scale=100):
+    def __init__(self, delay=10, scale=100, **kwargs):
+        super().__init__(**kwargs)
         self.delay = int(delay)
         self.scale = int(scale)
 

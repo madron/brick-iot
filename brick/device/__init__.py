@@ -11,6 +11,7 @@ def import_device_modules():
     from brick.device import base
     from brick.device import i2c
     from brick.device import adc
+    from brick.device import expander
     from brick.device import onewire
     from brick.device import test
 
@@ -29,7 +30,7 @@ def register_device(device_type=None):
     return decorator
 
 
-def validate_device(config):
+def validate_device(config, hardware_manager):
     re_name = re.compile('^[a-z][a-z0-9_]*$')
     import_device_modules()
     devices = dict()
@@ -45,6 +46,7 @@ def validate_device(config):
             if device_type not in _device_registry:
                 raise ValidationError("type '{}' does not exist.".format(device_type))
             device_class = _device_registry[device_type]
+            device_config['hardware_manager'] = hardware_manager
             devices[device_name] = device_class(**device_config)
         except ValidationError as error:
             errors[device_name] = error
@@ -56,13 +58,14 @@ def validate_device(config):
 
 
 class DeviceManager:
-    def __init__(self, log_collector, dispatcher, config):
+    def __init__(self, log_collector, dispatcher, hardware_manager, config):
         self.log_collector = log_collector
         self.dispatcher = dispatcher
         self.log = self.log_collector.get_logger('devicemanager')
         self.broker = self.dispatcher.get_broker('devicemanager')
+        self.hardware_manager = hardware_manager
         self.config = config
-        self.devices = validate_device(config)
+        self.devices = validate_device(config, self.hardware_manager)
         for device_name, instance in self.devices.items():
             instance.log = self.log_collector.get_logger(device_name)
             instance.broker = self.dispatcher.get_broker(device_name,callback=instance._message_received)
@@ -79,6 +82,9 @@ class DeviceManager:
 
 
 class Device:
+    def __init__(self, hardware_manager=None):
+        self.hardware_manager = hardware_manager
+
     async def start(self):
         self.log.debug('Started')
         await self._setup()

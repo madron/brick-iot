@@ -81,3 +81,16 @@ class DecimalValidator(IntegerValidator):
         if value == 0:
             value = abs(value)
         return value
+
+
+class OnOffValidator:
+    def __init__(self, name='value'):
+        self.name = name
+
+    def __call__(self, value):
+        if value == 'on' or value is True:
+            return 'on'
+        if value == 'off' or value is False:
+            return 'off'
+        msg = "Ensure {} is 'on' or 'off'.".format(self.name)
+        raise ValidationError(msg)

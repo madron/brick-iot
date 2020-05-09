@@ -6,6 +6,9 @@ from brick.hardware.onewire.w1thermsensor import W1ThermSensor
 
 @register_device()
 class OneWireDetect(Device):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     async def setup(self):
         sensors = await self.get_sensors()
         self.set_state('sensors', json.dumps(sensors))

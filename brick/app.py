@@ -5,6 +5,7 @@ from brick import web
 from brick.component import FakeComponent
 from brick.config import ConfigManager
 from brick.device import DeviceManager
+from brick.hardware import HardwareManager
 from brick.logging import LogCollector, StdoutLogConsumer
 from brick.message import Dispatcher
 from brick.mqtt import Mqtt
@@ -32,11 +33,22 @@ class Application:
         self.config_manager.set_log(self.log_collector.get_logger('config'))
         # Dispatcher
         self.dispatcher = Dispatcher(self.log_collector.get_logger('dispatcher'))
+        # Hardware
+        try:
+            self.hardware = HardwareManager(
+                self.log_collector,
+                self.dispatcher,
+                self.config.get('hardware', dict()),
+            )
+        except Exception as error:
+            self.hardware = FakeComponent()
+            self.log.exception('hardware component discarded', error)
         # Device
         try:
             self.device = DeviceManager(
                 self.log_collector,
                 self.dispatcher,
+                self.hardware,
                 self.config.get('devices', dict()),
             )
         except Exception as error:

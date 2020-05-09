@@ -35,7 +35,7 @@ class W1ThermSensor(W1ThermSensorSync):
                 if s:
                     self.type, self.id = s[0].type, s[0].id
                     break
-                asyncio.sleep(self.RETRY_DELAY_SECONDS)
+                await asyncio.sleep(self.RETRY_DELAY_SECONDS)
             else:
                 raise NoSensorFoundError("Could not find any sensor")
         elif not sensor_id:

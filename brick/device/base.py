@@ -1,7 +1,21 @@
 import asyncio
 import time
-import gpiozero
+from copy import copy
+from brick import validators
 from brick.device import Device, register_device
+from brick.exceptions import ValidationError
+from brick.hardware.gpio import GPIOInput, GPIOOutput
+from brick.hardware.mcp.mcp230xx import MCP23017Input, MCP23017Output
+
+
+DIGITAL_INPUT = dict(
+    GPIO=GPIOInput,
+    MCP23017=MCP23017Input,
+)
+DIGITAL_OUTPUT = dict(
+    GPIO=GPIOOutput,
+    MCP23017=MCP23017Output,
+)
 
 
 class SingleClickHandler:
@@ -58,10 +72,13 @@ class LongClickHandler:
 
 @register_device()
 class Button(Device):
-    def __init__(self, pin=None, debounce=50, long_click=None,
-                 on_press=[], on_release=[], on_single_click=[], on_long_click=[]):
-        self.pin = int(pin)
-        self.debounce = int(debounce)
+    debounce_validator = validators.IntegerValidator(name='debounce', min_value=0)
+
+    def __init__(self, hardware=dict(), debounce=50, long_click=None,
+                 on_press=[], on_release=[], on_single_click=[], on_long_click=[], **kwargs):
+        super().__init__(**kwargs)
+        self.debounce = self.debounce_validator(debounce)
+        self.hardware = self.clean_hardware(hardware, delay=self.debounce)
         self.delay = self.debounce / 1000
         self.on_single_click = on_single_click
         self.on_long_click = on_long_click
@@ -76,6 +93,21 @@ class Button(Device):
         else:
             self.handler = SingleClickHandler()
 
+    def clean_hardware(self, hardware, delay):
+        hardware = copy(hardware)
+        if 'type' not in hardware:
+            raise ValidationError('Missing hardware type.')
+        hardware_type = hardware.pop('type')
+        if hardware_type not in DIGITAL_INPUT:
+            msg = "Hardware type '{}' not supported. Choices: {}".format(hardware_type, DIGITAL_INPUT.keys())
+            raise ValidationError(msg)
+        hardware_class = DIGITAL_INPUT[hardware_type]
+        if 'device' in hardware:
+            hardware_name = hardware['device']
+            device = self.hardware_manager.hardware[hardware_name]
+            hardware['device'] = device
+        return hardware_class(delay=delay, **hardware)
+
     def clean_message_list(self, message_list):
         if message_list:
             if not isinstance(message_list[0], list):
@@ -83,14 +115,14 @@ class Button(Device):
         return message_list
 
     async def setup(self):
-        self.button = gpiozero.Button(self.pin)
+        await self.hardware.setup()
 
     async def loop(self):
         # If pressed on start wait until release
-        while self.button.is_pressed:
+        while await self.hardware.is_pressed():
             await asyncio.sleep(self.delay)
         while True:
-            for event in self.handler.get_events(self.button.is_pressed):
+            for event in self.handler.get_events(await self.hardware.is_pressed()):
                 self.event_handler(event)
             await asyncio.sleep(self.delay)
 
@@ -106,32 +138,49 @@ class Button(Device):
 
 @register_device()
 class Relay(Device):
-    def __init__(self, pin=None, initial='off'):
-        self.pin = int(pin)
-        self.initial = 'off'
-        if initial in ('on', True):
-            self.initial = 'on'
+    debounce_validator = validators.IntegerValidator(name='debounce', min_value=0)
+    initial_validator = validators.OnOffValidator(name='initial')
+
+    def __init__(self, hardware=dict(), initial='off', **kwargs):
+        super().__init__(**kwargs)
+        self.hardware = self.clean_hardware(hardware)
+        self.initial = self.initial_validator(initial)
+
+    def clean_hardware(self, hardware):
+        hardware = copy(hardware)
+        if 'type' not in hardware:
+            raise ValidationError('Missing hardware type.')
+        hardware_type = hardware.pop('type')
+        if hardware_type not in DIGITAL_OUTPUT:
+            msg = "Hardware type '{}' not supported. Choices: {}".format(hardware_type, DIGITAL_OUTPUT.keys())
+            raise ValidationError(msg)
+        hardware_class = DIGITAL_OUTPUT[hardware_type]
+        if 'device' in hardware:
+            hardware_name = hardware['device']
+            device = self.hardware_manager.hardware[hardware_name]
+            hardware['device'] = device
+        return hardware_class(**hardware)
 
     async def setup(self):
-        self.relay = gpiozero.LED(self.pin)
-        self.set_power(self.initial)
+        await self.hardware.setup()
+        await self.set_power(self.initial)
 
-    def set_power(self, value):
+    async def set_power(self, value):
         if value == 'on':
-            self.relay.on()
-            self.set_state('power', 'on')
-            self.log.debug('on')
-        if value == 'off':
-            self.relay.off()
-            self.set_state('power', 'off')
-            self.log.debug('off')
-        if value == 'toggle':
+            await self.hardware.set_state(value)
+            self.set_state('power', value)
+            self.log.debug(value)
+        elif value == 'off':
+            await self.hardware.set_state(value)
+            self.set_state('power', value)
+            self.log.debug(value)
+        elif value == 'toggle':
             power = self.get_state('power')
             if power == 'on':
-                self.set_power('off')
+                await self.set_power('off')
             if power == 'off':
-                self.set_power('on')
+                await self.set_power('on')
 
     async def message_received(self, sender=None, topic=None, payload=None):
         if topic == 'power':
-            self.set_power(payload)
+            await self.set_power(payload)
