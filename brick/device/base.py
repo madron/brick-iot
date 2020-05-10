@@ -164,7 +164,6 @@ class Relay(Device):
         return hardware_class(**hardware)
 
     async def setup(self):
-        print('setup', self.initial)
         await self.hardware.setup()
         if self.initial is None:
             await self.get_power()
