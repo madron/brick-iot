@@ -15,7 +15,11 @@ def main():
     kwargs = vars(parser.parse_args())
     app = Application(**kwargs)
     while True:
-        app.start()
+        try:
+            app.start()
+        except KeyboardInterrupt:
+            print()
+            exit(0)
         # Wait a little before restarting app
         time.sleep(5)
         print('Restarting app')
