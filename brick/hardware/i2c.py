@@ -13,6 +13,9 @@ class I2CManager:
             self.bus[i2c_bus] = SMBus2Asyncio(i2c_bus)
             return self.bus[i2c_bus]
 
+    async def setup(self):
+        for bus in self.bus.values():
+            await bus.open()
 
 i2c_manager = I2CManager()
 

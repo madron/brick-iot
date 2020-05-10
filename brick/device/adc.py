@@ -13,10 +13,6 @@ class ADS1115(NumericSensor):
         self.bus = i2c_manager.get_bus(i2c_bus)
         self.adc = ads1x15.ADS1115(self.bus, address=address)
 
-    async def setup(self):
-        await super().setup()
-        await self.bus.open()
-
     async def get_value(self):
         value = await self.adc.read_adc(self.channel)
         return value * self.voltage_conversion_factor

@@ -12,7 +12,6 @@ class I2CDetect(Device):
         self.addresses = []
 
     async def setup(self):
-        await self.bus.open()
         addresses = await self.get_addresses()
         self.set_state('adresses', str(addresses))
 

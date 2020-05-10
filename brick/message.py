@@ -41,7 +41,6 @@ class Dispatcher:
                 self.log.error('No callback - {} -> {}'.format(sender, recipient))
         else:
             self.log.error('No recipient - {} -> {}'.format(sender, recipient))
-        # return asyncio.sleep(0)
 
     def subscribe(self, component, callback, sender, topic):
         self.log.debug('subscribe - {} - {}/{}'.format(component, sender, topic))

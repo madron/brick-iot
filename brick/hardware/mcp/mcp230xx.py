@@ -92,7 +92,6 @@ class MCP23017(Hardware):
 
     async def setup(self):
         await super().setup()
-        await self.bus.open()
         for port in self.ports:
             direction = int(''.join([self.direction[port][c] for c in self.channels_reverse]), 2)
             pullup = int(''.join([self.pullup[port][c] for c in self.channels_reverse]), 2)

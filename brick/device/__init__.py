@@ -5,6 +5,7 @@ import time
 from decimal import Decimal
 from brick import validators
 from brick.exceptions import ValidationError
+from brick.hardware.i2c import i2c_manager
 
 
 def import_device_modules():
@@ -70,6 +71,7 @@ class DeviceManager:
             instance.broker = self.dispatcher.get_broker(device_name,callback=instance._message_received)
 
     async def start(self):
+        await i2c_manager.setup()
         for name, device in self.devices.items():
             await device.start()
             await asyncio.sleep(0)
