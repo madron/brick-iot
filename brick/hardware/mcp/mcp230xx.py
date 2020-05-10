@@ -11,7 +11,8 @@ from brick.hardware.mcp import mcp230xx
 MCP230XX_DEFAULT_ADDRESS = 0x20
 MCP23017_DIRECTION_REGISTER = dict(a=0x00, b=0x01)  # bit 1=in 0=out
 MCP23017_PULL_UP_REGISTER = dict(a=0x0C, b=0x0D)  # bit 1 -> pup 100k
-MCP23017_GPIO_REGISTER = dict(a=0x12, b=0x13)
+MCP23017_INPUT_REGISTER = dict(a=0x12, b=0x13)
+MCP23017_OUTPUT_REGISTER = dict(a=0x14, b=0x15)
 
 
 class MCP23017Input(DigitalInput):
@@ -106,7 +107,7 @@ class MCP23017(Hardware):
 
     async def read_port(self, port):
         async with self.lock:
-            value = await self.bus.read_byte_data(self.address, MCP23017_GPIO_REGISTER[port])
+            value = await self.bus.read_byte_data(self.address, MCP23017_INPUT_REGISTER[port])
         for c in self.channels:
             self.value[port][c] = '1' if value & 1 << c else '0'
         self.last_read_time[port] = time_ns()
@@ -115,7 +116,7 @@ class MCP23017(Hardware):
         async with self.lock:
             await self.bus.write_byte_data(
                 self.address,
-                MCP23017_GPIO_REGISTER[port],
+                MCP23017_OUTPUT_REGISTER[port],
                 int(''.join([self.value[port][c] for c in self.channels_reverse]), 2),
             )
 
@@ -123,7 +124,12 @@ class MCP23017(Hardware):
         half_delay_ns = delay * 500000
         if time_ns() - self.last_read_time[port] > half_delay_ns:
             await self.read_port(port)
-        return 'on' if self.value[port][channel] == '0' else 'off'
+        if self.direction[port][channel] == '1':
+            # direction in
+            return 'on' if self.value[port][channel] == '0' else 'off'
+        else:
+            # direction out
+            return 'on' if self.value[port][channel] == '1' else 'off'
 
     async def set_channel_state(self, port, channel, state):
         self.value[port][channel] = '1' if state == 'on' else '0'
