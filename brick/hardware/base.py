@@ -19,6 +19,7 @@ class DigitalOutput:
     def __init__(self, device=None, name=''):
         self.device = device
         self.name = name
+        self.delay = 0
 
     async def setup(self):
         pass
@@ -28,6 +29,9 @@ class DigitalOutput:
 
     async def off(self):
         await self.set_state('off')
+
+    async def get_state(self):
+        raise NotImplementedError()
 
     async def set_state(self, state):
         raise NotImplementedError()

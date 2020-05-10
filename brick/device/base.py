@@ -141,10 +141,12 @@ class Relay(Device):
     debounce_validator = validators.IntegerValidator(name='debounce', min_value=0)
     initial_validator = validators.OnOffValidator(name='initial')
 
-    def __init__(self, hardware=dict(), initial='off', **kwargs):
+    def __init__(self, hardware=dict(), initial=None, **kwargs):
         super().__init__(**kwargs)
         self.hardware = self.clean_hardware(hardware)
-        self.initial = self.initial_validator(initial)
+        self.initial = initial
+        if self.initial is not None:
+            self.initial = self.initial_validator(initial)
 
     def clean_hardware(self, hardware):
         hardware = copy(hardware)
@@ -162,8 +164,16 @@ class Relay(Device):
         return hardware_class(**hardware)
 
     async def setup(self):
+        print('setup', self.initial)
         await self.hardware.setup()
-        await self.set_power(self.initial)
+        if self.initial is None:
+            await self.get_power()
+        else:
+            await self.set_power(self.initial)
+
+    async def get_power(self):
+            value = await self.hardware.get_state()
+            self.set_state('power', value)
 
     async def set_power(self, value):
         if value == 'on':

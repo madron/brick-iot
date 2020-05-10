@@ -36,6 +36,9 @@ class MCP23017Output(DigitalOutput):
         self.channel = channel
         self.device.channel_config(port, channel, name=self.name, direction='out')
 
+    async def get_state(self):
+        return await self.device.get_channel_state(self.port, self.channel, delay=self.delay)
+
     async def set_state(self, state):
         await self.device.set_channel_state(self.port, self.channel, state)
 
