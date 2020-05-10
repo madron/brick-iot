@@ -115,7 +115,6 @@ class MCP23017(Hardware):
                 MCP23017_GPIO_REGISTER[port],
                 int(''.join([self.value[port][c] for c in self.channels_reverse]), 2),
             )
-        await self.read_port(port)
 
     async def get_channel_state(self, port, channel, delay=200):
         half_delay_ns = delay * 500000
