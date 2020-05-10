@@ -1,3 +1,6 @@
+from brick.exceptions import ValidationError
+
+
 class DigitalInput:
     def __init__(self, device=None, name='', delay=200):
         self.device = device
@@ -16,10 +19,25 @@ class DigitalInput:
 
 
 class DigitalOutput:
-    def __init__(self, device=None, name=''):
+    def __init__(self, device=None, contact='no', name=''):
         self.device = device
         self.name = name
         self.delay = 0
+        self.contact = self.validate_contact(contact)
+
+    def validate_contact(self, contact):
+        if contact is False:
+            contact = 'no'
+        if contact not in ('no', 'nc'):
+            msg = "contact '{}' not supported. Choices: 'no' (normally open) or 'nc' (normally closed)".format(contact)
+            raise ValidationError(msg)
+        return contact
+
+    def get_contact_value(self, value):
+        if self.contact == 'no':
+            return value
+        else:
+            return 'on' if value == 'off' else 'off'
 
     async def setup(self):
         pass

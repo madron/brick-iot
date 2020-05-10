@@ -30,16 +30,11 @@ class GPIOOutput(DigitalOutput):
         self.output = gpiozero.LED(self.pin)
 
     async def get_state(self):
-        return 'on' if self.output.is_lit else 'off'
+        return self.get_contact_value('on' if self.output.is_lit else 'off')
 
-    async def set_state(self, state):
-        if state == 'on':
+    async def set_state(self, value):
+        value = self.get_contact_value(value)
+        if value == 'on':
             self.output.on()
-        if state == 'off':
+        if value == 'off':
             self.output.off()
-
-    async def on(self):
-        self.output.on()
-
-    async def off(self):
-        self.output.off()
