@@ -128,3 +128,25 @@ class DecimalValidatorTest(unittest.TestCase):
         with self.assertRaises(ValidationError) as ctx:
             validator(2.01)
         self.assertEqual(ctx.exception.message, 'Ensure delay is less than or equal to 2.000000')
+
+
+class OnOffValidatorTest(unittest.TestCase):
+    def test_simple(self):
+        validator = validators.OnOffValidator(name='initial')
+        self.assertEqual(validator('on'), 'on')
+        self.assertEqual(validator('off'), 'off')
+        with self.assertRaises(ValidationError) as ctx:
+            validator(None)
+        self.assertEqual(ctx.exception.message, "Ensure initial is 'on' or 'off'.")
+        with self.assertRaises(ValidationError) as ctx:
+            validator('offf')
+        self.assertEqual(ctx.exception.message, "Ensure initial is 'on' or 'off'.")
+
+    def test_null(self):
+        validator = validators.OnOffValidator(name='initial', null=True)
+        self.assertEqual(validator('on'), 'on')
+        self.assertEqual(validator('off'), 'off')
+        self.assertEqual(validator(None), None)
+        with self.assertRaises(ValidationError) as ctx:
+            validator('offf')
+        self.assertEqual(ctx.exception.message, "Ensure initial is 'on' or 'off'.")

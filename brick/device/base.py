@@ -125,13 +125,11 @@ class Button(Device):
 class Relay(Device):
     hardware_list = DIGITAL_OUTPUT
     debounce_validator = validators.IntegerValidator(name='debounce', min_value=0)
-    initial_validator = validators.OnOffValidator(name='initial')
+    initial_validator = validators.OnOffValidator(name='initial', null=True)
 
     def __init__(self, initial=None, **kwargs):
         super().__init__(**kwargs)
-        self.initial = initial
-        if self.initial is not None:
-            self.initial = self.initial_validator(initial)
+        self.initial = self.initial_validator(initial)
 
     async def setup(self):
         await self.hardware.setup()

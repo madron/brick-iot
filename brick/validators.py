@@ -84,10 +84,13 @@ class DecimalValidator(IntegerValidator):
 
 
 class OnOffValidator:
-    def __init__(self, name='value'):
+    def __init__(self, name='value', null=False):
         self.name = name
+        self.null = null
 
     def __call__(self, value):
+        if self.null and value is None:
+            return None
         if value == 'on' or value is True:
             return 'on'
         if value == 'off' or value is False:
