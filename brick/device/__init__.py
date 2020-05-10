@@ -2,6 +2,7 @@ import asyncio
 import json
 import re
 import time
+from copy import copy
 from decimal import Decimal
 from brick import validators
 from brick.exceptions import ValidationError
@@ -83,8 +84,38 @@ class DeviceManager:
 
 
 class Device:
-    def __init__(self, hardware_manager=None):
+    hardware_list = dict()
+    hardware_config_extra = dict()
+
+    def __init__(self, hardware_manager=None, hardware=None):
         self.hardware_manager = hardware_manager
+        self.hardware = self.validate_hardware(hardware)
+
+    def validate_hardware(self, hardware, delay=None):
+        if self.hardware_list:
+            if not hardware:
+                msg = 'Missing hardware parameter.'
+                raise ValidationError(msg)
+            hardware = copy(hardware)
+            if 'type' not in hardware:
+                raise ValidationError('Missing hardware type.')
+            hardware_type = hardware.pop('type')
+            if hardware_type not in self.hardware_list:
+                msg = "Hardware type '{}' not supported. Choices: {}".format(hardware_type, self.hardware_list.keys())
+                raise ValidationError(msg)
+            hardware_class = self.hardware_list[hardware_type]
+            if 'device' in hardware:
+                hardware_name = hardware['device']
+                device = self.hardware_manager.hardware[hardware_name]
+                hardware['device'] = device
+            hardware.update(self.hardware_config_extra)
+            return hardware_class(**hardware)
+        else:
+            if hardware:
+                msg = 'Hardware parameter not supported.'
+                raise ValidationError(msg)
+            else:
+                return None
 
     async def start(self):
         self.log.debug('Started')

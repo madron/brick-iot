@@ -1,6 +1,5 @@
 import asyncio
 import time
-from copy import copy
 from brick import validators
 from brick.device import Device, register_device
 from brick.exceptions import ValidationError
@@ -72,13 +71,14 @@ class LongClickHandler:
 
 @register_device()
 class Button(Device):
+    hardware_list = DIGITAL_INPUT
     debounce_validator = validators.IntegerValidator(name='debounce', min_value=0)
 
-    def __init__(self, hardware=dict(), debounce=50, long_click=None,
+    def __init__(self, debounce=50, long_click=None,
                  on_press=[], on_release=[], on_single_click=[], on_long_click=[], **kwargs):
-        super().__init__(**kwargs)
         self.debounce = self.debounce_validator(debounce)
-        self.hardware = self.clean_hardware(hardware, delay=self.debounce)
+        self.hardware_config_extra = dict(delay=self.debounce)
+        super().__init__(**kwargs)
         self.delay = self.debounce / 1000
         self.on_single_click = on_single_click
         self.on_long_click = on_long_click
@@ -92,21 +92,6 @@ class Button(Device):
             self.handler = LongClickHandler(long_click=int(long_click))
         else:
             self.handler = SingleClickHandler()
-
-    def clean_hardware(self, hardware, delay):
-        hardware = copy(hardware)
-        if 'type' not in hardware:
-            raise ValidationError('Missing hardware type.')
-        hardware_type = hardware.pop('type')
-        if hardware_type not in DIGITAL_INPUT:
-            msg = "Hardware type '{}' not supported. Choices: {}".format(hardware_type, DIGITAL_INPUT.keys())
-            raise ValidationError(msg)
-        hardware_class = DIGITAL_INPUT[hardware_type]
-        if 'device' in hardware:
-            hardware_name = hardware['device']
-            device = self.hardware_manager.hardware[hardware_name]
-            hardware['device'] = device
-        return hardware_class(delay=delay, **hardware)
 
     def clean_message_list(self, message_list):
         if message_list:
@@ -138,30 +123,15 @@ class Button(Device):
 
 @register_device()
 class Relay(Device):
+    hardware_list = DIGITAL_OUTPUT
     debounce_validator = validators.IntegerValidator(name='debounce', min_value=0)
     initial_validator = validators.OnOffValidator(name='initial')
 
-    def __init__(self, hardware=dict(), initial=None, **kwargs):
+    def __init__(self, initial=None, **kwargs):
         super().__init__(**kwargs)
-        self.hardware = self.clean_hardware(hardware)
         self.initial = initial
         if self.initial is not None:
             self.initial = self.initial_validator(initial)
-
-    def clean_hardware(self, hardware):
-        hardware = copy(hardware)
-        if 'type' not in hardware:
-            raise ValidationError('Missing hardware type.')
-        hardware_type = hardware.pop('type')
-        if hardware_type not in DIGITAL_OUTPUT:
-            msg = "Hardware type '{}' not supported. Choices: {}".format(hardware_type, DIGITAL_OUTPUT.keys())
-            raise ValidationError(msg)
-        hardware_class = DIGITAL_OUTPUT[hardware_type]
-        if 'device' in hardware:
-            hardware_name = hardware['device']
-            device = self.hardware_manager.hardware[hardware_name]
-            hardware['device'] = device
-        return hardware_class(**hardware)
 
     async def setup(self):
         await self.hardware.setup()
