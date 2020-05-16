@@ -2,6 +2,7 @@ import asyncio
 import io
 import sys
 import traceback
+from logging import Handler
 from datetime import datetime
 from uuid import uuid4
 
@@ -29,10 +30,21 @@ LEVEL_NAME = {
 }
 
 
-class Logger:
+class Logger(Handler):
     def __init__(self, log_collector, component):
+        super().__init__()
         self.log_collector = log_collector
         self.component = component
+
+    def emit(self, record):
+        try:
+            self.log(record.levelno, self.format(record))
+        except RecursionError:  # See issue 36272
+            raise
+        except Exception:
+            self.handleError(record)
+        # print(record)
+        # print(dir(record))
 
     def log(self, level, message, *args, **kwargs):
         self.log_collector.log(level, self.component, message, *args, **kwargs)
