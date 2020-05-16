@@ -5,3 +5,5 @@ smbus2==0.3.0  # Needed by smbus2-asyncio
 smbus2-asyncio==0.0.5
 click==7.1.2   # Needed by w1thermsensor
 w1thermsensor==1.3.0
+fastapi==0.54.1
+uvicorn==0.11.5

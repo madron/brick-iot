@@ -77,7 +77,11 @@ class Application:
             self.log.exception('mqtt component discarded', error)
         # Web server
         try:
-            self.web = web.Server(log_collector=self.log_collector)
+            self.web = web.Server(
+                log_collector=self.log_collector,
+                broker=self.dispatcher.get_broker('web'),
+                config=self.config.get('web', dict()),
+            )
         except Exception as error:
             self.web = FakeComponent()
             self.log.exception('web component discarded')
