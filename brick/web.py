@@ -29,24 +29,25 @@ class Server:
         self.host = config.get('host', '0.0.0.0')
         self.port = config.get('port', 80)
         self.port = 8000
-        self.server = None
+        # Uvicorn
+        self.uvicorn_server = None
+        config = uvicorn.Config(app)
+        config.load()
+        self.protocol_factory = functools.partial(
+            config.http_protocol_class,
+            config=config,
+            server_state=ServerState(),
+        )
 
     async def start(self, logger=None):
         loop = asyncio.get_event_loop()
-        server_state = ServerState()
-        config = uvicorn.Config(app, host=self.host, port=self.port)
-        if not config.loaded:
-            config.load()
-        create_protocol = functools.partial(
-            config.http_protocol_class, config=config, server_state=server_state
-        )
-        self.server = await loop.create_server(
-            create_protocol,
+        self.uvicorn_server = await loop.create_server(
+            self.protocol_factory,
             host=self.host,
             port=self.port,
         )
         self.log.info('Server started on port {}'.format(self.port))
 
     async def stop(self, logger=None):
-        self.server.close()
-        await self.server.wait_closed()
+        self.uvicorn_server.close()
+        await self.uvicorn_server.wait_closed()
