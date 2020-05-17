@@ -1,25 +1,16 @@
 import os
-from fastapi import FastAPI, Request
+from fastapi import Request
+from fastapi.routing import APIRoute
 from fastapi.templating import Jinja2Templates
 
 
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'templates'))
 
 
-class App(FastAPI):
-    def set_config_manager(self, config_manager):
-        self.config_manager = config_manager
-
-
-app = App()
-
-
-@app.get("/")
 async def home(request: Request):
     return templates.TemplateResponse('home.html', dict(request=request))
 
 
-@app.get("/config")
 async def config(request: Request):
     success_url = '/config/'
     method = 'GET'
@@ -41,7 +32,12 @@ async def config(request: Request):
             errors = dict(config=[str(err)])
     else:
         config_text = await config_manager.get_config_text()
-        print(config_text)
 
     context = dict(request=request, errors=errors, config_text=config_text)
     return templates.TemplateResponse('config.html', context)
+
+
+routes = [
+    APIRoute('/', home),
+    APIRoute('/config', config, methods=['GET']),
+]

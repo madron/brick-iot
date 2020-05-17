@@ -1,7 +1,8 @@
 import asyncio
 import functools
 import uvicorn
-from .app import app
+from fastapi import FastAPI
+from .root import routes
 
 
 class ServerState:
@@ -10,6 +11,12 @@ class ServerState:
         self.connections = set()
         self.tasks = set()
         self.default_headers = []
+
+
+class App(FastAPI):
+    def __init__(self, config_manager):
+        super().__init__(routes=routes)
+        self.config_manager = config_manager
 
 
 class Server:
@@ -23,9 +30,8 @@ class Server:
         self.port = config.get('port', 80)
         # Uvicorn
         self.uvicorn_server = None
-        app.set_config_manager(self.config_manager)
         config = uvicorn.Config(
-            app,
+            App(config_manager=self.config_manager),
             log_config=self.get_log_config(),
             use_colors=False
         )
