@@ -1,15 +1,7 @@
 import asyncio
 import functools
 import uvicorn
-from fastapi import FastAPI
-
-
-app = FastAPI()
-
-
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
+from .app import app
 
 
 class ServerState:
@@ -28,7 +20,6 @@ class Server:
         self.log = self.log_collector.get_logger('web')
         self.host = config.get('host', '0.0.0.0')
         self.port = config.get('port', 80)
-        self.port = 8000
         # Uvicorn
         self.uvicorn_server = None
         config = uvicorn.Config(
@@ -36,7 +27,6 @@ class Server:
             log_config=self.get_log_config(),
             use_colors=False
         )
-        # config = uvicorn.Config(app)
         config.load()
         self.protocol_factory = functools.partial(
             config.http_protocol_class,
