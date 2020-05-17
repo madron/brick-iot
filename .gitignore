@@ -22,6 +22,10 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
+# Build
+build/
+dist/
+*.egg-info/
 
 # Environments
 .env

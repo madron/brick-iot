@@ -35,6 +35,7 @@ setup(
     keywords='iot mqtt',
 
     packages=find_packages(),
+    package_data={'brick.web': ['templates']},
     install_requires=requirements,
     entry_points = dict(
         console_scripts=['brick=brick.__main__:main'],
