@@ -1,5 +1,7 @@
 import os
 from fastapi import Request
+from starlette.responses import RedirectResponse
+from brick.exceptions import ValidationError
 
 
 async def home(request: Request):
@@ -7,20 +9,17 @@ async def home(request: Request):
 
 
 async def config(request: Request):
-    success_url = '/config/'
-    method = 'GET'
-
+    success_url = '/config'
     config_manager = request.app.config_manager
 
     errors = dict()
-    if method == 'POST':
-        await request.read_form_data()
-        config_text = request.form['config']
+    if request.method == 'POST':
+        data = await request.form()
+        config_text = data['config']
         try:
-            config.validate_config(config_text)
-            config.save_config(config_text)
-            # yield from self.redirect(response, success_url)
-            return
+            config_manager.validate(config_text)
+            await config_manager.save(config_text)
+            return RedirectResponse(success_url, status_code=302)
         except ValidationError as error:
             errors = error.message_dict
         except Exception as err:

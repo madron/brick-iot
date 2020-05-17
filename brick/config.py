@@ -56,7 +56,7 @@ class ConfigManager:
 
     async def save(self, config_text):
         async with aiofiles.open(self.config_file_name, mode='w') as f:
-            f.write(config_text)
+            await f.write(config_text)
         if self.persist_command_args:
             try:
                 subprocess.run(self.persist_command_args, check=True)

@@ -20,7 +20,7 @@ class App(FastAPI):
     def __init__(self, config_manager):
         super().__init__(routes=[
             APIRoute('/', root.home),
-            APIRoute('/config', root.config, methods=['GET']),
+            APIRoute('/config', root.config, methods=['GET', 'POST']),
         ])
         self.templates = Jinja2Templates(directory=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'templates'))
         self.config_manager = config_manager
