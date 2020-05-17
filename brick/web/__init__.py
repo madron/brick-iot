@@ -13,15 +13,17 @@ class ServerState:
 
 
 class Server:
-    def __init__(self, log_collector, broker, config=dict()):
+    def __init__(self, log_collector, broker, config_manager, config=dict()):
         self.log_collector = log_collector
         self.broker = broker
+        self.config_manager = config_manager
         self.config = config
         self.log = self.log_collector.get_logger('web')
         self.host = config.get('host', '0.0.0.0')
         self.port = config.get('port', 80)
         # Uvicorn
         self.uvicorn_server = None
+        app.set_config_manager(self.config_manager)
         config = uvicorn.Config(
             app,
             log_config=self.get_log_config(),

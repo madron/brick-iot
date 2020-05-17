@@ -80,6 +80,7 @@ class Application:
             self.web = web.Server(
                 log_collector=self.log_collector,
                 broker=self.dispatcher.get_broker('web'),
+                config_manager=self.config_manager,
                 config=self.config.get('web', dict()),
             )
         except Exception as error:
