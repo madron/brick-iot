@@ -1,8 +1,11 @@
 import asyncio
 import functools
+import os
 import uvicorn
 from fastapi import FastAPI
-from .root import routes
+from fastapi.templating import Jinja2Templates
+from fastapi.routing import APIRoute
+from . import root
 
 
 class ServerState:
@@ -15,7 +18,11 @@ class ServerState:
 
 class App(FastAPI):
     def __init__(self, config_manager):
-        super().__init__(routes=routes)
+        super().__init__(routes=[
+            APIRoute('/', root.home),
+            APIRoute('/config', root.config, methods=['GET']),
+        ])
+        self.templates = Jinja2Templates(directory=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'templates'))
         self.config_manager = config_manager
 
 
