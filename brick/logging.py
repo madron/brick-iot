@@ -43,8 +43,6 @@ class Logger(Handler):
             raise
         except Exception:
             self.handleError(record)
-        # print(record)
-        # print(dir(record))
 
     def log(self, level, message, *args, **kwargs):
         self.log_collector.log(level, self.component, message, *args, **kwargs)
