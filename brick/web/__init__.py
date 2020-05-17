@@ -3,8 +3,10 @@ import functools
 import os
 import uvicorn
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.routing import APIRoute
+from starlette.routing import Mount
 from . import root
 
 
@@ -18,11 +20,13 @@ class ServerState:
 
 class App(FastAPI):
     def __init__(self, config_manager):
+        module_path = os.path.dirname(os.path.realpath(__file__))
         super().__init__(routes=[
             APIRoute('/', root.home),
             APIRoute('/config', root.config, methods=['GET', 'POST']),
+            Mount('/static', StaticFiles(directory=os.path.join(module_path, 'static')), name='static'),
         ])
-        self.templates = Jinja2Templates(directory=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'templates'))
+        self.templates = Jinja2Templates(directory=os.path.join(module_path, 'templates'))
         self.config_manager = config_manager
 
 
