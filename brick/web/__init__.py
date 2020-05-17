@@ -1,21 +1,15 @@
 import asyncio
 import functools
 import os
-import uvicorn
+import signal
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.routing import APIRoute
+from hypercorn.asyncio import serve
+from hypercorn.config import Config
 from starlette.routing import Mount
 from . import root
-
-
-class ServerState:
-    def __init__(self):
-        self.total_requests = 0
-        self.connections = set()
-        self.tasks = set()
-        self.default_headers = []
 
 
 class App(FastAPI):
@@ -39,34 +33,36 @@ class Server:
         self.log = self.log_collector.get_logger('web')
         self.host = config.get('host', '0.0.0.0')
         self.port = config.get('port', 80)
-        # Uvicorn
-        self.uvicorn_server = None
-        config = uvicorn.Config(
-            App(config_manager=self.config_manager),
-            log_config=self.get_log_config(),
-            use_colors=False
-        )
-        config.load()
-        self.protocol_factory = functools.partial(
-            config.http_protocol_class,
-            config=config,
-            server_state=ServerState(),
-        )
+        # Hypercorn
+        self.task = None
+        self.shutdown_event = asyncio.Event()
+        self.hypercorn_config = Config()
+        self.hypercorn_config.bind = ['{}:{}'.format(self.host, self.port)]
+        self.hypercorn_config.logconfig_dict = self.get_log_config()
+        self.app = App(config_manager=self.config_manager)
+
+    def shutdown_signal_handler(self, *args) -> None:
+            self.shutdown_event.set()
 
     def get_log_config(self):
         config = dict(
             version=1,
             disable_existing_loggers=False,
-            formatters=dict(
-                default={
-                    'class': 'logging.Formatter',
-                    'fmt': '%(message)s',
-                },
-                access={
-                    'class': 'logging.Formatter',
-                    'fmt': '%(client_addr)s - "%(request_line)s" %(status_code)s',
-                },
-            ),
+            root=dict(level='INFO', handlers=['default']),
+            loggers={
+                'hypercorn.error': dict(
+                    level='INFO',
+                    handlers=['default'],
+                    propagate=False,
+                    qualname='hypercorn.error',
+                ),
+                'hypercorn.access': dict(
+                    level='INFO',
+                    handlers=['default'],
+                    propagate=False,
+                    qualname='hypercorn.access',
+                ),
+            },
             handlers=dict(
                 default={
                     'formatter': 'default',
@@ -74,30 +70,27 @@ class Server:
                     'log_collector': self.log_collector,
                     'component': 'web',
                 },
-                access={
-                    'formatter': 'access',
-                    'class': 'brick.logging.Logger',
-                    'log_collector': self.log_collector,
-                    'component': 'web',
+            ),
+            formatters=dict(
+                default={
+                    'class': 'logging.Formatter',
+                    'fmt': '%(message)s',
                 },
             ),
-            loggers={
-                "": {"handlers": ["default"], "level": "INFO"},
-                "uvicorn.error": {"level": "INFO"},
-                "uvicorn.access": {"handlers": ["access"], "level": "INFO", "propagate": False},
-            },
         )
         return config
 
     async def start(self, logger=None):
         loop = asyncio.get_event_loop()
-        self.uvicorn_server = await loop.create_server(
-            self.protocol_factory,
-            host=self.host,
-            port=self.port,
+        loop.add_signal_handler(signal.SIGTERM, self.shutdown_signal_handler)
+        self.task = asyncio.create_task(
+            serve(
+                self.app,
+                self.hypercorn_config,
+                shutdown_trigger=self.shutdown_event.wait,
+            )
         )
         self.log.info('Server listening to {}:{}'.format(self.host, self.port))
 
     async def stop(self, logger=None):
-        self.uvicorn_server.close()
-        await self.uvicorn_server.wait_closed()
+        self.task.cancel()
