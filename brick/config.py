@@ -1,6 +1,8 @@
+import asyncio
 import os
 import subprocess
 import sys
+import aiofiles
 import yaml
 from brick import constants
 from brick.device import validate_device
@@ -22,13 +24,22 @@ class ConfigManager:
     def set_log(self, log):
         self. log = log
 
-    def get(self):
+    async def get_config_text(self):
         try:
-            with open(self.config_file_name, 'r') as f:
-                text = f.read()
+            async with aiofiles.open(self.config_file_name, mode='r') as f:
+                text = await f.read()
         except FileNotFoundError:
             text = constants.DEFAULT_CONFIG
-            self.save(text)
+            await self.save(text)
+        return text
+
+    async def get(self):
+        text = await self.get_config_text()
+        return self.validate(text)
+
+    def get_sync(self):
+        loop = asyncio.get_event_loop()
+        text = loop.run_until_complete(self.get_config_text())
         return self.validate(text)
 
     def validate(self, config_text):
@@ -43,8 +54,8 @@ class ConfigManager:
         validate_device(config.get('devices', dict()), hardware_manager)
         return config
 
-    def save(self, config_text):
-        with open(self.config_file_name, 'w') as f:
+    async def save(self, config_text):
+        async with aiofiles.open(self.config_file_name, mode='w') as f:
             f.write(config_text)
         if self.persist_command_args:
             try:

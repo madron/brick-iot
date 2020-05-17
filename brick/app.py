@@ -16,7 +16,7 @@ class Application:
     def __init__(self, config_dir=None, persist_command=None):
         # Config
         self.config_manager = ConfigManager(config_dir=config_dir, persist_command=persist_command)
-        self.config = self.config_manager.get()
+        self.config = self.config_manager.get_sync()
         self.name = self.config.get('name', 'brick')
         self.mode = self.config.get('mode', 'normal')
         self.mqtt_config = self.config.get('mqtt', dict())
