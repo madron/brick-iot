@@ -196,7 +196,8 @@ class Sensor(Device):
     max_delay_validator = validators.DecimalValidator(name='max_delay')
     config_mode_validator = validators.BooleanValidator(name='config_mode')
 
-    def __init__(self, delay=10, max_delay=0, config_mode=False):
+    def __init__(self, delay=10, max_delay=0, config_mode=False, **kwargs):
+        super().__init__(**kwargs)
         self.delay = self.delay_validator(delay)
         self.max_delay = self.max_delay_validator(max_delay)
         self.config_mode = self.config_mode_validator(config_mode)
