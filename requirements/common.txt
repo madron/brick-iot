@@ -5,7 +5,7 @@ smbus2==0.3.0  # Needed by smbus2-asyncio
 smbus2-asyncio==0.0.5
 click==7.1.2   # Needed by w1thermsensor
 w1thermsensor==1.3.0
-fastapi==0.65.2
+fastapi==0.109.1
 hypercorn==0.9.5
 jinja2==2.11.3
 aiofiles==0.5.0
